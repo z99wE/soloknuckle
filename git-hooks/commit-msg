@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# commit-msg — enforces a clean commit message format.
+
+MSG_FILE="$1"
+FIRST_LINE=$(head -n 1 "$MSG_FILE")
+
+# Allow merge commits
+if [[ "$FIRST_LINE" =~ ^Merge ]]; then exit 0; fi
+
+# Conventional commits format: type(scope): subject
+#   types: feat, fix, chore, docs, refactor, test, perf, security
+if ! [[ "$FIRST_LINE" =~ ^(feat|fix|chore|docs|refactor|test|perf|security|style)(\([a-z0-9-]+\))?:\ .+ ]]; then
+  echo "❌ Commit message must follow Conventional Commits format:"
+  echo "   <type>(<scope>): <subject>"
+  echo ""
+  echo "   Types: feat | fix | chore | docs | refactor | test | perf | security | style"
+  echo ""
+  echo "   Got: $FIRST_LINE"
+  exit 1
+fi

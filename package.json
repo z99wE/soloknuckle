@@ -1,0 +1,42 @@
+{
+  "name": "production-hygiene",
+  "version": "1.0.0",
+  "description": "A folder you drop into any project so your AI coding tools (Claude, Codex, Cursor, Replit, Antigravity, Copilot) can never accidentally break your live app.",
+  "main": "./dist/cli/index.js",
+  "bin": {
+    "soloknuckle": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node cli/index.ts",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/z99wE/soloknuckle.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/z99wE/soloknuckle/issues"
+  },
+  "homepage": "https://github.com/z99wE/soloknuckle#readme",
+  "dependencies": {
+    "@types/node": "^26.2.0",
+    "chalk": "^6.0.0",
+    "commander": "^15.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "inquirer": "^14.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "vitest": "^4.1.10"
+  }
+}
