@@ -6,11 +6,14 @@ Soloknuckle is a Production Hygiene CLI & Neo-Brutalist Web Hub that developers 
 
 1. **Scaffold Hygiene Rules**: Runs `soloknuckle init` to instantly add `.cursorrules`, `AGENTS.md`, and CI/CD templates into any project, ensuring all AI agents read the master rules first.
 2. **Branch Protection & Git Hooks**: Installs Git hooks to block direct pushes to `main`.
-3. **Pre-Flight Checks**: Runs `soloknuckle check` to run linters, type checkers, and security scans (gitleaks) before you are allowed to merge or push.
+3. **Pre-Flight Checks**: Runs `soloknuckle check` to rigorously enforce linters, type checkers, tests (`vitest`), and run intelligent PII & Secret Redaction (blocking API keys and dummy data).
 4. **LLM Code Auditing**: Runs `soloknuckle audit` to use any LLM (local Ollama or cloud OpenAI/Anthropic/Gemini keys) to review uncommitted code against your `AGENTS.md` rules.
-5. **Founder Control Center (UI)**: Provides a Neo-Brutalist Web UI (`soloknuckle ui`) to visualize and toggle feature flags (`flags.json`), manage allowlists, and view staging rollbacks without touching code.
-6. **Agentic IDE Integration**: Designed to be the standard context root for any agentic IDE. Tell your IDE "Read AGENTS.md and use soloknuckle to audit" and it works automatically.
-
+5. **Agent Persona Manager**: Runs `soloknuckle persona <type> <folder>` to enforce bounded contexts by generating directory-specific AI agent rules (e.g. `frontend-ux` vs `backend-security`).
+6. **Agent Telemetry Engine**: Tracks AI vs Human code contributions locally and visualizes them to show your team's real reliance on AI tooling.
+7. **Strict PR Description Enforcer**: Runs `soloknuckle pr` to fetch the git diff and auto-generate a perfectly formatted `PR_DESCRIPTION.md` using the LLM API.
+8. **Automated Rollback Triggers**: Run `soloknuckle watch` to monitor error spikes and automatically toggle feature flags off directly in your codebase.
+9. **Founder Control Center (UI)**: Provides a Neo-Brutalist Web UI (`soloknuckle ui`) to visualize feature flags, launch the Agent Sandbox execution environment, apply personas, and view staging rollbacks without touching code.
+10. **Agentic IDE Integration**: Designed to be the standard context root for any agentic IDE. Tell your IDE "Read AGENTS.md and use soloknuckle to audit" and it works automatically.
 ## What it CANNOT do
 
 1. **It is NOT a hosting provider**: It manages your staging URLs and rollbacks conceptually via Vercel/Railway, but it does not host the code itself.
