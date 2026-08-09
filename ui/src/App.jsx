@@ -139,6 +139,42 @@ function App() {
           </div>
           <button className="btn" style={{ width: '100%', marginTop: '1.5rem' }}>Acknowledge</button>
         </div>
+
+        {/* Card 6: Telemetry Dashboard */}
+        <div className="card" style={{ backgroundColor: '#ffffaa' }}>
+          <h2>Agent Telemetry</h2>
+          <p>Track AI vs Human code contributions and rollback frequencies.</p>
+          <div style={{ flex: 1, marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ padding: '0.5rem', border: '2px solid #000', background: '#fff' }}>
+              <strong>AI Commits:</strong> 42 (75%)
+            </div>
+            <div style={{ padding: '0.5rem', border: '2px solid #000', background: '#fff' }}>
+              <strong>Human Commits:</strong> 14 (25%)
+            </div>
+            <div style={{ padding: '0.5rem', border: '2px solid #000', background: '#fff', marginTop: '1rem' }}>
+              <strong>Auto-Rollbacks Today:</strong> 2
+            </div>
+          </div>
+          <button className="btn" style={{ width: '100%', marginTop: '1.5rem' }}>View Full Report</button>
+        </div>
+
+        {/* Card 7: Persona Manager */}
+        <div className="card">
+          <h2>Agent Persona Manager</h2>
+          <p>Assign directory-specific rules (`.cursorrules` / `SKILL.md`) for specialized AI behavior.</p>
+          <div style={{ flex: 1, marginTop: '1rem' }}>
+            <label style={{ display: 'block', fontWeight: 'bold' }}>Target Directory</label>
+            <input type="text" defaultValue="./ui/src" style={{ width: '100%', padding: '0.5rem', border: '2px solid #000', marginBottom: '1rem' }} />
+            
+            <label style={{ display: 'block', fontWeight: 'bold' }}>Persona Profile</label>
+            <select style={{ width: '100%', padding: '0.5rem', border: '2px solid #000' }}>
+              <option>Frontend UX Designer</option>
+              <option>Backend Security Architect</option>
+              <option>Data Engineer</option>
+            </select>
+          </div>
+          <button className="btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem' }}>Apply Persona</button>
+        </div>
       </div>
     </div>
   );

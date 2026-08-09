@@ -8,6 +8,11 @@ import fs from 'fs';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import { scanDiffForSecretsAndPII } from './scanner';
+import { applyPersona } from './personas';
+import { generatePRDescription } from './pr-enforcer';
+import { checkErrorThresholdsAndRollback } from './rollback';
+import { logTelemetry, getTelemetry } from './telemetry';
 
 const program = new Command();
 
@@ -113,6 +118,20 @@ program
         console.log(chalk.green('✅ Tests passed.'));
       } catch (e) {
         throw new Error('Tests failed');
+      }
+
+      console.log(chalk.blue('Scanning for Secrets and PII...'));
+      let diff = '';
+      try {
+        diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
+      } catch(e) {}
+      
+      const violations = scanDiffForSecretsAndPII(diff);
+      if (violations.length > 0) {
+        violations.forEach(v => console.log(chalk.red(v)));
+        throw new Error('Secret/PII scan failed');
+      } else {
+        console.log(chalk.green('✅ No secrets or PII detected.'));
       }
       
       console.log(chalk.cyan('🎉 All quality gates passed! You are clear for takeoff.'));
@@ -229,6 +248,44 @@ program
     } catch (e) {
       console.log(chalk.red('Could not launch UI. Make sure dependencies are installed in the ui/ folder.'));
     }
+  });
+
+program
+  .command('persona <type> <folder>')
+  .description('Generate directory-specific agent rules (frontend-ux | backend-security | data-engineer)')
+  .action((type, folder) => {
+    try {
+      const p = applyPersona(folder, type as any);
+      console.log(chalk.green(`✅ Created persona config at ${p}`));
+    } catch (e: any) {
+      console.log(chalk.red(`Failed to apply persona: ${e.message}`));
+    }
+  });
+
+program
+  .command('pr')
+  .description('Generate strict PR description from git diff')
+  .action(async () => {
+    const answers = await inquirer.prompt([
+      { type: 'input', name: 'apiKey', message: 'Enter your OpenAI API key for PR generation:' }
+    ]);
+    await generatePRDescription(answers.apiKey);
+  });
+
+program
+  .command('watch')
+  .description('Monitor error thresholds and auto-rollback features')
+  .action(() => {
+    checkErrorThresholdsAndRollback();
+  });
+
+program
+  .command('telemetry')
+  .description('View Agent Telemetry')
+  .action(() => {
+    const data = getTelemetry();
+    console.log(chalk.magenta('📊 Agent Telemetry:'));
+    console.log(chalk.white(JSON.stringify(data, null, 2)));
   });
 
 program.parse(process.argv);
