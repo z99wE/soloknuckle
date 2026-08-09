@@ -11,8 +11,9 @@ import cors from 'cors';
 import { scanDiffForSecretsAndPII } from './scanner';
 import { applyPersona } from './personas';
 import { generatePRDescription } from './pr-enforcer';
-import { checkErrorThresholdsAndRollback } from './rollback';
+import { checkErrorThresholdsAndRollback, initWebhookListener } from './rollback';
 import { logTelemetry, getTelemetry } from './telemetry';
+import { getOrPromptApiKey } from './config';
 
 const program = new Command();
 
@@ -147,19 +148,7 @@ program
   .action(async () => {
     console.log(chalk.blue('🤖 Auditing local changes...'));
     
-    let apiKey = process.env.LLM_API_KEY;
-    
-    if (!apiKey) {
-      const answers = await inquirer.prompt([
-        {
-          type: 'password',
-          name: 'key',
-          message: 'Please enter your LLM API Key (OpenAI/Anthropic/Gemini) to perform the audit:',
-        }
-      ]);
-      apiKey = answers.key;
-      console.log(chalk.dim('Note: In a real app, this key would be stored securely in the system keychain.'));
-    }
+    const apiKey = await getOrPromptApiKey();
 
     console.log(chalk.yellow('Fetching local diff and AGENTS.md...'));
     let diff = '';
@@ -222,15 +211,22 @@ program
     app.use(cors());
     app.use(express.json());
 
+    // Sandbox execution with STRICT allowlist
+    const ALLOWED_COMMANDS = ['npm test', 'npm run lint', 'git status', 'git diff', 'npx soloknuckle check'];
+
     app.post('/api/sandbox', (req, res) => {
       const command = req.body.command;
       if (!command) {
         return res.status(400).json({ error: 'No command provided' });
       }
 
+      if (!ALLOWED_COMMANDS.includes(command)) {
+        console.log(chalk.red(`[Sandbox Blocked] Unauthorized command attempted: ${command}`));
+        return res.status(403).json({ success: false, output: `Error: Command "${command}" is blocked for security reasons. Allowed commands: ${ALLOWED_COMMANDS.join(', ')}` });
+      }
+
       console.log(chalk.cyan(`[Sandbox] Executing: ${command}`));
       try {
-        // Execute in a contained subprocess
         const output = execSync(command, { encoding: 'utf-8', cwd: process.cwd(), timeout: 10000 });
         res.json({ success: true, output });
       } catch (err: any) {
@@ -238,16 +234,25 @@ program
       }
     });
 
+    // Serve the pre-built UI static files
+    const uiDistPath = path.join(__dirname, '..', '..', 'ui', 'dist');
+    if (fs.existsSync(uiDistPath)) {
+      app.use(express.static(uiDistPath));
+      console.log(chalk.blue(`Serving UI from compiled distribution: ${uiDistPath}`));
+    } else {
+      console.log(chalk.yellow('UI Dist folder not found (likely in dev mode). Attempting to run Vite dev server...'));
+      try {
+        // Run asynchronously so we don't block the backend listening below
+        require('child_process').spawn('npm', ['run', 'dev'], { cwd: path.join(__dirname, '..', '..', 'ui'), stdio: 'inherit', shell: true });
+      } catch (e) {
+        console.log(chalk.red('Could not launch UI dev server.'));
+      }
+    }
+
     const PORT = 3001;
     app.listen(PORT, () => {
-      console.log(chalk.green(`✅ Sandbox backend listening on port ${PORT}`));
+      console.log(chalk.green(`✅ Founder Control Center is live at http://localhost:${PORT}`));
     });
-
-    try {
-      execSync('npm run dev', { cwd: path.join(__dirname, '..', '..', 'ui'), stdio: 'inherit' });
-    } catch (e) {
-      console.log(chalk.red('Could not launch UI. Make sure dependencies are installed in the ui/ folder.'));
-    }
   });
 
 program
@@ -266,17 +271,15 @@ program
   .command('pr')
   .description('Generate strict PR description from git diff')
   .action(async () => {
-    const answers = await inquirer.prompt([
-      { type: 'input', name: 'apiKey', message: 'Enter your OpenAI API key for PR generation:' }
-    ]);
-    await generatePRDescription(answers.apiKey);
+    const apiKey = await getOrPromptApiKey();
+    await generatePRDescription(apiKey);
   });
 
 program
   .command('watch')
-  .description('Monitor error thresholds and auto-rollback features')
+  .description('Start the Rollback Daemon and Webhook Listener')
   .action(() => {
-    checkErrorThresholdsAndRollback();
+    initWebhookListener();
   });
 
 program
