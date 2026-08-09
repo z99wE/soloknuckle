@@ -13,27 +13,58 @@ Soloknuckle is a Production Hygiene CLI & Neo-Brutalist Web Hub that developers 
 7. **Strict PR Description Enforcer**: Runs `soloknuckle pr` to fetch the git diff and auto-generate a perfectly formatted `PR_DESCRIPTION.md` using the LLM API.
 8. **Automated Rollback Triggers**: Run `soloknuckle watch` to monitor error spikes and automatically toggle feature flags off directly in your codebase.
 9. **Founder Control Center (UI)**: Provides a Neo-Brutalist Web UI (`soloknuckle ui`) to visualize feature flags, launch the Agent Sandbox execution environment, apply personas, and view staging rollbacks without touching code.
-10. **Agentic IDE Integration**: Designed to be the standard context root for any agentic IDE. Tell your IDE "Read AGENTS.md and use soloknuckle to audit" and it works automatically.
+10. **Agentic IDE Integration**: Instantly transforms your repository into an Agentic OS context root.
+    - **Claude Code**: Generates a `SKILL.md` in your `.gemini/config/skills` directory, effectively teaching Claude that "Soloknuckle" is a native skill it can use.
+    - **Cursor**: Generates a `.cursorrules` file, which intercepts Cursor's context window and tells it to run the hygiene checks.
+    - **Codex / Lovable (MCP)**: Generates an `mcp-config.json` (Model Context Protocol standard) to expose Soloknuckle as a set of tools directly to the LLM's tool-calling interface.
 ## What it CANNOT do
 
 1. **It is NOT a hosting provider**: It manages your staging URLs and rollbacks conceptually via Vercel/Railway, but it does not host the code itself.
 2. **It is NOT a CI pipeline**: It acts as a *local* pre-flight check and rule enforcer. You should still use GitHub Actions or CircleCI for remote validation.
 3. **It does NOT write your application code**: It is a hygiene layer. It scaffolds the guardrails, but you or your AI agent still write the actual features.
 
-## Getting Started
+## Installation & Setup
+
+You can use Soloknuckle in two distinct ways: as a standalone zero-dependency CLI, or entirely invisibly as a Vite Plugin.
+
+### Option 1: Standalone CLI (Zero-Dependency)
+
+Use `npx` to fetch and run Soloknuckle on the fly without installing it globally. This is perfect for terminal use or CI/CD pipelines.
 
 ```bash
-# Initialize inside any existing project
+# 1. Initialize inside any existing project (scaffolds IDE hooks)
 npx soloknuckle init
 
-# Launch the visual Founder Control Center
+# 2. Launch the visual Founder Control Center
 npx soloknuckle ui
 
-# Run pre-flight checks before pushing
+# 3. Run pre-flight checks before pushing
 npx soloknuckle check
 ```
 
+### Option 2: The Vite Plugin (Invisible Integration)
+
+If you want Soloknuckle to act as an invisible build-time guardian without running CLI commands manually, you can use our Vite Plugin!
+
+First, install the package as a dev dependency:
+```bash
+npm install soloknuckle --save-dev
+```
+
+Then, just drop it into your `vite.config.ts` or `vite.config.js`:
+```typescript
+import { defineConfig } from 'vite';
+import soloknucklePlugin from 'soloknuckle/cli/vite-plugin';
+
+export default defineConfig({
+  plugins: [
+    soloknucklePlugin() // 🛡️ Automatically runs quality gates & secret scans on build!
+  ]
+});
+```
+Every time your application builds or spins up a dev server, Soloknuckle will silently scan for secrets, enforce linting, and run the telemetry checks in the background.
+
 ## IDE Integration (The Universal Prompt)
 
-Paste this into Cursor, Replit, or Copilot for any project running Soloknuckle:
-> Before doing anything, read AGENTS.md in the project root. Always use `soloknuckle check` before finishing a task.
+If you are using an IDE that doesn't natively support `.cursorrules` or MCP, paste this into your LLM chat:
+> Before doing anything, read AGENTS.md in the project root. Always use `npx soloknuckle check` before finishing a task.
