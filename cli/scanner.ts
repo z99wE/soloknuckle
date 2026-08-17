@@ -1,5 +1,3 @@
-import chalk from 'chalk';
-
 const SECRET_PATTERNS = [
   /sk_live_[0-9a-zA-Z]{24}/,  // Stripe live key
   /xoxb-[0-9A-Za-z\-]+/,      // Slack bot token
@@ -11,6 +9,13 @@ const PII_PATTERNS = [
   /\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/, // SSN-like
 ];
 
+/**
+ * Scans a git diff string for potential secrets, API keys, and Personally Identifiable Information (PII).
+ * This function only scans line additions (`+`) to prevent flagging deleted secrets.
+ * 
+ * @param diff - The git diff string to scan.
+ * @returns An array of string violations. If empty, no violations were found.
+ */
 export function scanDiffForSecretsAndPII(diff: string): string[] {
   const violations: string[] = [];
 
@@ -22,11 +27,13 @@ export function scanDiffForSecretsAndPII(diff: string): string[] {
     for (const pattern of SECRET_PATTERNS) {
       if (pattern.test(line)) {
         violations.push(`Line ${index + 1}: Potential secret/API key detected.`);
+        break;
       }
     }
     for (const pattern of PII_PATTERNS) {
       if (pattern.test(line) && !line.includes('example.com') && !line.includes('test@')) {
         violations.push(`Line ${index + 1}: Potential PII (Email/SSN) detected.`);
+        break;
       }
     }
   });

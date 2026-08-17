@@ -13,10 +13,22 @@ Soloknuckle is a Production Hygiene CLI & Neo-Brutalist Web Hub that developers 
 7. **Strict PR Description Enforcer**: Runs `soloknuckle pr` to fetch the git diff and auto-generate a perfectly formatted `PR_DESCRIPTION.md` using the LLM API.
 8. **Automated Rollback Triggers**: Run `soloknuckle watch` to monitor error spikes and automatically toggle feature flags off directly in your codebase.
 9. **Founder Control Center (UI)**: Provides a Neo-Brutalist Web UI (`soloknuckle ui`) to visualize feature flags, launch the Agent Sandbox execution environment, apply personas, and view staging rollbacks without touching code.
-10. **Agentic IDE Integration**: Instantly transforms your repository into an Agentic OS context root.
+10. **Deterministic Agent Firewall**: Actively intercepts and blocks destructive shell commands (like `rm -rf` or `git push --force`) run by agents in the sandbox, returning a structured JSON error to force the agent to auto-correct.
+11. **Zero Cognitive Load Wizard**: Run `npx soloknuckle` with no arguments to launch an interactive, Neo-Brutalist terminal UI that routes you to features instantly.
+12. **Agent Capabilities Hook**: Exposes `npx soloknuckle capabilities` to act as a machine-readable directory, allowing AI agents to self-discover all commands.
+13. **Agentic IDE Integration**: Instantly transforms your repository into an Agentic OS context root.
     - **Claude Code**: Generates a `SKILL.md` in your `.gemini/config/skills` directory, effectively teaching Claude that "Soloknuckle" is a native skill it can use.
     - **Cursor**: Generates a `.cursorrules` file, which intercepts Cursor's context window and tells it to run the hygiene checks.
+    - **Windsurf**: Generates a `.windsurfrules` file with identical context steering.
     - **Codex / Lovable (MCP)**: Generates an `mcp-config.json` (Model Context Protocol standard) to expose Soloknuckle as a set of tools directly to the LLM's tool-calling interface.
+
+## The Commands
+
+- `soloknuckle check` - The enforcer. Evaluates your current git diff against `.soloknuckle/config.json`. If it fails, your pre-commit hook dies.
+- `soloknuckle config` - Interactive setup to tune the aggression of your agent and configure your local Ollama or cloud LLM.
+- `soloknuckle ui` - Spawns the local web dashboard to manage branch visualizers, toggle features, and test code in a secure sandbox.
+- `soloknuckle score` - Performs a Deep Vibe Check and calculates your Project Health Metrics (0-100) across 5 pillars (Quality, Testing, Security, Efficiency, Accessibility), complete with an AI-generated Action Plan.
+
 ## What it CANNOT do
 
 1. **It is NOT a hosting provider**: It manages your staging URLs and rollbacks conceptually via Vercel/Railway, but it does not host the code itself.
@@ -67,4 +79,4 @@ Every time your application builds or spins up a dev server, Soloknuckle will si
 ## IDE Integration (The Universal Prompt)
 
 If you are using an IDE that doesn't natively support `.cursorrules` or MCP, paste this into your LLM chat:
-> Before doing anything, read AGENTS.md in the project root. Always use `npx soloknuckle check` before finishing a task.
+> Before doing anything, read AGENTS.md in the project root. If you need to know what tools are available, run \`npx soloknuckle capabilities\`. Always use \`npx soloknuckle check\` before finishing a task.

@@ -1,15 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), '.soloknuckle');
-const TELEMETRY_FILE = path.join(DATA_DIR, 'telemetry.json');
+function getDataDir() {
+  return path.join(process.cwd(), '.soloknuckle');
+}
+
+function getTelemetryFile() {
+  return path.join(getDataDir(), 'telemetry.json');
+}
 
 export function initTelemetry() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  const dataDir = getDataDir();
+  const telemetryFile = getTelemetryFile();
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
-  if (!fs.existsSync(TELEMETRY_FILE)) {
-    fs.writeFileSync(TELEMETRY_FILE, JSON.stringify({
+  if (!fs.existsSync(telemetryFile)) {
+    fs.writeFileSync(telemetryFile, JSON.stringify({
       humanCommits: 0,
       aiCommits: 0,
       linesByHuman: 0,
@@ -20,7 +27,13 @@ export function initTelemetry() {
 
 export function logTelemetry(isAi: boolean, linesChanged: number) {
   initTelemetry();
-  const data = JSON.parse(fs.readFileSync(TELEMETRY_FILE, 'utf-8'));
+  const telemetryFile = getTelemetryFile();
+  let data: Record<string, number>;
+  try {
+    data = JSON.parse(fs.readFileSync(telemetryFile, 'utf-8'));
+  } catch {
+    data = { humanCommits: 0, aiCommits: 0, linesByHuman: 0, linesByAi: 0 };
+  }
   
   if (isAi) {
     data.aiCommits += 1;
@@ -30,11 +43,12 @@ export function logTelemetry(isAi: boolean, linesChanged: number) {
     data.linesByHuman += linesChanged;
   }
 
-  fs.writeFileSync(TELEMETRY_FILE, JSON.stringify(data, null, 2));
+  fs.writeFileSync(telemetryFile, JSON.stringify(data, null, 2));
   return data;
 }
 
 export function getTelemetry() {
   initTelemetry();
-  return JSON.parse(fs.readFileSync(TELEMETRY_FILE, 'utf-8'));
+  const telemetryFile = getTelemetryFile();
+  return JSON.parse(fs.readFileSync(telemetryFile, 'utf-8'));
 }

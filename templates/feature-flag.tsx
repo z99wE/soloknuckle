@@ -70,26 +70,28 @@ export function useFeatureFlag(flag: string, userEmail?: string): boolean {
   const [enabled, setEnabled] = React.useState(false);
 
   React.useEffect(() => {
+    let cancelled = false;
     if (typeof window !== "undefined") {
       const local = localStorage.getItem(`ff:${flag}`);
       if (local === "on") {
         setEnabled(true);
-        return;
+        return () => { cancelled = true; };
       }
       if (local === "off") {
         setEnabled(false);
-        return;
+        return () => { cancelled = true; };
       }
     }
     const emails = [FOUNDER_EMAIL].filter(Boolean);
     if (userEmail && emails.includes(userEmail)) {
       setEnabled(true);
-      return;
+      return () => { cancelled = true; };
     }
     fetch(`/api/flags/${flag}`)
       .then((r) => r.json())
-      .then((d) => setEnabled(!!d.enabled))
-      .catch(() => setEnabled(false));
+      .then((d) => !cancelled && setEnabled(!!d.enabled))
+      .catch(() => !cancelled && setEnabled(false));
+    return () => { cancelled = true; };
   }, [flag, userEmail]);
 
   return enabled;
