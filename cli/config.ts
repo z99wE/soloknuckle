@@ -7,23 +7,28 @@ import chalk from 'chalk';
 const CONFIG_DIR = path.join(os.homedir(), '.soloknuckle');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-interface SoloknuckleConfig {
+export interface SoloknuckleConfig {
+  LLM_PROVIDER?: string;
   LLM_API_KEY?: string;
+  LLM_BASE_URL?: string;
+  LLM_MODEL?: string;
+  hooksEnabled?: boolean;
+  aiCommitsEnabled?: boolean;
 }
 
-function loadConfig(): SoloknuckleConfig {
+export function loadConfig(): SoloknuckleConfig {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
       const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
       return JSON.parse(data);
-    } catch (e) {
+    } catch {
       return {};
     }
   }
   return {};
 }
 
-function saveConfig(config: SoloknuckleConfig) {
+export function saveConfig(config: SoloknuckleConfig) {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
   }
@@ -45,16 +50,33 @@ export async function getOrPromptApiKey(): Promise<string> {
   // 3. Prompt user if neither exists
   const answers = await inquirer.prompt([
     {
+      type: 'select',
+      name: 'provider',
+      message: 'Select your preferred LLM Provider:',
+      choices: ['OpenAI', 'Anthropic', 'Gemini', 'Ollama (Local)'],
+      default: 'OpenAI'
+    },
+    {
       type: 'password',
       name: 'key',
-      message: 'Please enter your LLM API Key (OpenAI/Anthropic/Gemini) to perform AI audits (this will be saved securely in ~/.soloknuckle/config.json):',
+      message: 'Please enter your API Key (Leave blank if using local Ollama):',
+      when: (ans) => ans.provider !== 'Ollama (Local)'
+    },
+    {
+      type: 'input',
+      name: 'baseUrl',
+      message: 'Enter the base URL for Ollama:',
+      default: 'http://localhost:11434/api/chat',
+      when: (ans) => ans.provider === 'Ollama (Local)'
     }
   ]);
 
   // Save for future use
-  config.LLM_API_KEY = answers.key;
+  config.LLM_PROVIDER = answers.provider;
+  config.LLM_API_KEY = answers.key || '';
+  config.LLM_BASE_URL = answers.baseUrl || '';
   saveConfig(config);
   
-  console.log(chalk.green('✅ API Key saved locally to ~/.soloknuckle/config.json'));
-  return answers.key;
+  console.log(chalk.green('✅ Configuration saved locally to ~/.soloknuckle/config.json'));
+  return config.LLM_API_KEY || '';
 }

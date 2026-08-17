@@ -71,7 +71,7 @@ fi
 # ---------- 5. Tests ----------
 echo "5/7 Running tests..."
 if [ -f package.json ] && grep -qE '"test"\s*:' package.json; then
-  npm test --silent -- --watchAll=false 2>&1 | tail -5 || fail "Tests failed. Run 'npm test' to see what."
+  npm test --silent --run 2>&1 | tail -5 || fail "Tests failed. Run 'npm test' to see what."
   ok "tests passed"
 else
   warn "no test script found — skipping"

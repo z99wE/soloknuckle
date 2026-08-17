@@ -7,9 +7,13 @@
     "soloknuckle": "./dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cd ui && npm install --include=dev && npm run build",
+    "prepare": "npm run build",
     "dev": "ts-node cli/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -24,19 +28,24 @@
   },
   "homepage": "https://github.com/z99wE/soloknuckle#readme",
   "dependencies": {
-    "@types/node": "^26.2.0",
     "chalk": "^6.0.0",
     "commander": "^15.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "inquirer": "^14.0.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^7.0.2"
+    "inquirer": "^14.0.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/node": "^26.2.0",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.1",
+    "supertest": "^7.2.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
 }

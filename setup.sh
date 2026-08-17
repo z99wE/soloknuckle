@@ -33,9 +33,11 @@ cp -r "$HYGIENE_SRC/scripts" "$TARGET/scripts"
 cp -r "$HYGIENE_SRC/workflow" "$TARGET/workflow"
 chmod +x "$TARGET/scripts/"*.sh
 
-# 2. Install the git hook that blocks direct main pushes
-echo "🛡️  Installing safety hook (blocks direct main pushes)..."
+# 2. Install the git hooks
+echo "🛡️  Installing safety hooks..."
 mkdir -p "$TARGET/.git/hooks"
+
+# pre-push: block direct pushes to main/develop
 cat > "$TARGET/.git/hooks/pre-push" <<'HOOK'
 #!/usr/bin/env bash
 # Block direct pushes to main / develop — force PR workflow.
@@ -52,6 +54,16 @@ while read local_ref local_sha remote_ref remote_sha; do
 done
 HOOK
 chmod +x "$TARGET/.git/hooks/pre-push"
+
+# pre-commit: run the full quality gate suite
+cp "$HYGIENE_SRC/git-hooks/pre-commit" "$TARGET/.git/hooks/pre-commit"
+chmod +x "$TARGET/.git/hooks/pre-commit"
+
+# commit-msg: enforce conventional commits format
+cp "$HYGIENE_SRC/git-hooks/commit-msg" "$TARGET/.git/hooks/commit-msg"
+chmod +x "$TARGET/.git/hooks/commit-msg"
+
+echo "  Installed: pre-push, pre-commit, commit-msg hooks"
 
 # 3. Ensure git + branches
 if [ ! -d "$TARGET/.git" ]; then

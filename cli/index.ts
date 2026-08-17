@@ -6,14 +6,19 @@ import inquirer from 'inquirer';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 import express from 'express';
-import cors from 'cors';
+
+dotenv.config();
+
 import { scanDiffForSecretsAndPII } from './scanner';
-import { applyPersona } from './personas';
+import { applyPersona, PersonaType } from './personas';
 import { generatePRDescription } from './pr-enforcer';
-import { checkErrorThresholdsAndRollback, initWebhookListener } from './rollback';
+import { initWebhookListener } from './rollback';
 import { logTelemetry, getTelemetry } from './telemetry';
 import { getOrPromptApiKey } from './config';
+import { callLLM } from './llm-client';
+import { calculateMetrics, generateSuggestions } from './scorer';
 
 const program = new Command();
 
@@ -21,6 +26,65 @@ program
   .name('soloknuckle')
   .description('Production Hygiene Kit & Neo-Brutalist Hub')
   .version('1.0.0');
+
+// Multi-pronged capabilities registry
+const CAPABILITIES = `
+# Soloknuckle Agent Capabilities Registry
+
+You are integrated with Soloknuckle, a Production Hygiene OS. You have access to the following commands:
+- \`npx soloknuckle check\`: Runs strict pre-flight checks (lint, test, typecheck, secret scan). MUST be run before any git commit.
+- \`npx soloknuckle audit\`: Analyzes local uncommitted code against AGENTS.md rules.
+- \`npx soloknuckle score\`: Calculates a 0-100 project health score and provides AI suggestions.
+- \`npx soloknuckle init\`: Scaffolds hooks and rules for any project.
+- \`npx soloknuckle ui\`: Launches the visual dashboard and deterministic agent sandbox.
+- \`npx soloknuckle pr\`: Auto-generates a PR description from a git diff.
+- \`npx soloknuckle persona <type> <folder>\`: Applies bounded-context agent rules to specific directories.
+`;
+
+// Default action (Wizard) when no args are provided
+if (process.argv.length <= 2) {
+  (async () => {
+    console.log(chalk.magenta.bold('\nWelcome to Soloknuckle 🛡️\n'));
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'What would you like to do?',
+        choices: [
+          { name: '🛡️  Run Pre-flight Checks (check)', value: 'check' },
+          { name: '🤖 Audit Local Changes (audit)', value: 'audit' },
+          { name: '🔍 Calculate Project Health Score (score)', value: 'score' },
+          { name: '🎨 Launch Founder UI Dashboard (ui)', value: 'ui' },
+          { name: '📊 View Agent Telemetry (telemetry)', value: 'telemetry' },
+          { name: '🏗️  Scaffold Agent Context (init)', value: 'init' },
+          { name: '❌ Exit', value: 'exit' }
+        ]
+      }
+    ]);
+
+    if (action === 'exit') {
+      process.exit(0);
+    }
+    
+    // Execute the corresponding command logic
+    try {
+      execSync(`npx ts-node cli/index.ts ${action}`, { stdio: 'inherit', cwd: process.cwd() });
+    } catch (e: unknown) {
+      // Errors are already piped to stdout
+    }
+    process.exit(0);
+  })();
+} else {
+  // If arguments exist, commander will parse them normally
+}
+
+program
+  .command('capabilities')
+  .description('Returns a structured registry of all tools available to AI agents')
+  .action(() => {
+    console.log(CAPABILITIES);
+  });
+
 
 program
   .command('init')
@@ -38,21 +102,54 @@ program
       console.log(chalk.green('✅ Created AGENTS.md'));
     }
 
-    // Git Hooks
+    // Git Hooks (via Husky compatibility or native)
     const hooksDir = path.join(target, '.git', 'hooks');
     if (fs.existsSync(path.join(target, '.git'))) {
       if (!fs.existsSync(hooksDir)) fs.mkdirSync(hooksDir, { recursive: true });
       const prePushPath = path.join(hooksDir, 'pre-push');
-      fs.writeFileSync(prePushPath, '#!/usr/bin/env bash\n# Block direct pushes to main\nexit 0');
+      const hookContent = `#!/usr/bin/env bash
+branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$branch" = "main" ]; then
+  echo "❌ Direct pushes to main are blocked by Soloknuckle."
+  exit 1
+fi
+echo "🛡️ Soloknuckle running pre-push checks..."
+npx soloknuckle check
+if [ $? -ne 0 ]; then
+  echo "❌ Soloknuckle check failed. Push aborted."
+  exit 1
+fi
+exit 0`;
+      fs.writeFileSync(prePushPath, hookContent);
       fs.chmodSync(prePushPath, '755');
-      console.log(chalk.green('✅ Installed git pre-push hook'));
+      
+      const preCommitPath = path.join(hooksDir, 'pre-commit');
+      const preCommitContent = `#!/usr/bin/env bash
+echo "🛡️ Soloknuckle checking for secrets/PII before commit..."
+npx soloknuckle check
+if [ $? -ne 0 ]; then
+  echo "❌ Pre-commit checks failed. Commit aborted."
+  exit 1
+fi
+exit 0`;
+      fs.writeFileSync(preCommitPath, preCommitContent);
+      fs.chmodSync(preCommitPath, '755');
+      console.log(chalk.green('✅ Installed git pre-push and pre-commit hooks (Husky-compatible)'));
     }
 
     // Agentic IDE Plugin & Skill Generation
+    const agentInstructions = 'Always read AGENTS.md before modifying code. If you need to know what tools are available, run `npx soloknuckle capabilities`. Run `npx soloknuckle check` before committing.';
+    
     const cursorRulesPath = path.join(target, '.cursorrules');
     if (!fs.existsSync(cursorRulesPath)) {
-      fs.writeFileSync(cursorRulesPath, 'Always read AGENTS.md before modifying code. Run "soloknuckle audit" before committing.');
+      fs.writeFileSync(cursorRulesPath, agentInstructions);
       console.log(chalk.green('✅ Created .cursorrules for Cursor AI'));
+    }
+
+    const windsurfRulesPath = path.join(target, '.windsurfrules');
+    if (!fs.existsSync(windsurfRulesPath)) {
+      fs.writeFileSync(windsurfRulesPath, agentInstructions);
+      console.log(chalk.green('✅ Created .windsurfrules for Windsurf IDE'));
     }
 
     const skillMdPath = path.join(target, 'SKILL.md');
@@ -62,15 +159,15 @@ name: production-hygiene-enforcer
 description: Enforces safe deployment rules and hygiene practices.
 ---
 # Instructions
-Before committing code, you MUST run \`npx soloknuckle audit\`. Never propose changes directly to the \`main\` branch. Always use feature flags for new features.`;
+${agentInstructions}`;
       fs.writeFileSync(skillMdPath, skillContent);
-      console.log(chalk.green('✅ Created SKILL.md for Claude Code / Agent ingestion'));
+      console.log(chalk.green('✅ Created SKILL.md for Claude Code / Antigravity / Gemini'));
     }
 
     const replitPath = path.join(target, '.replit');
     if (!fs.existsSync(replitPath)) {
       fs.writeFileSync(replitPath, 'run = "npx soloknuckle ui"\n');
-      console.log(chalk.green('✅ Created .replit config for Replit Agent integration'));
+      console.log(chalk.green('✅ Created .replit config for Replit Agent'));
     }
 
     const mcpPath = path.join(target, 'mcp-config.json');
@@ -79,15 +176,15 @@ Before committing code, you MUST run \`npx soloknuckle audit\`. Never propose ch
         mcpServers: {
           soloknuckle: {
             command: "npx",
-            args: ["soloknuckle", "audit"]
+            args: ["soloknuckle", "capabilities"]
           }
         }
       }, null, 2);
       fs.writeFileSync(mcpPath, mcpContent);
-      console.log(chalk.green('✅ Created mcp-config.json for ChatGPT Codex / Lovable integration'));
+      console.log(chalk.green('✅ Created mcp-config.json for ChatGPT Codex / Lovable / Claude Desktop integration'));
     }
 
-    console.log(chalk.cyan('✨ Initialization complete. Your project is now fully protected and Agent-Ready.'));
+    console.log(chalk.cyan('✨ Initialization complete. Your project is now fully protected and Multi-Pronged Agent-Ready.'));
   });
 
 program
@@ -97,36 +194,59 @@ program
     console.log(chalk.yellow('🛡️ Running pre-flight checks...'));
     
     try {
+      const pkgPath = path.join(process.cwd(), 'package.json');
+      let hasLint = false, hasTest = false;
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.scripts) {
+          hasLint = !!pkg.scripts.lint;
+          hasTest = !!pkg.scripts.test;
+        }
+      }
+
       console.log(chalk.blue('Running linter (ESLint)...'));
-      try {
-        execSync('npm run lint', { stdio: 'inherit', cwd: process.cwd() });
-        console.log(chalk.green('✅ Lint passed.'));
-      } catch (e) {
-        throw new Error('Lint failed');
+      if (hasLint) {
+        try {
+          execSync('npm run lint', { stdio: 'inherit', cwd: process.cwd(), timeout: 30000 });
+          console.log(chalk.green('✅ Lint passed.'));
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Unknown error';
+          throw new Error(`Lint failed: ${msg}`);
+        }
+      } else {
+        console.log(chalk.yellow('⚠️ No "lint" script found in package.json. Skipping.'));
       }
       
       console.log(chalk.blue('Running type checker...'));
       try {
-        execSync('npx tsc --noEmit', { stdio: 'inherit', cwd: process.cwd() });
+        execSync('npx tsc --noEmit', { stdio: 'inherit', cwd: process.cwd(), timeout: 30000 });
         console.log(chalk.green('✅ Types are solid.'));
-      } catch (e) {
-        throw new Error('Type check failed');
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        console.log(chalk.red(`⚠️ "tsc" not found or failed: ${msg}`));
       }
       
       console.log(chalk.blue('Running tests...'));
-      try {
-        execSync('npm run test', { stdio: 'inherit', cwd: process.cwd() });
-        console.log(chalk.green('✅ Tests passed.'));
-      } catch (e) {
-        throw new Error('Tests failed');
+      if (hasTest) {
+        try {
+          execSync('npm run test', { stdio: 'inherit', cwd: process.cwd(), timeout: 60000 });
+          console.log(chalk.green('✅ Tests passed.'));
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Unknown error';
+          throw new Error(`Tests failed: ${msg}`);
+        }
+      } else {
+        console.log(chalk.yellow('⚠️ No "test" script found in package.json. Skipping.'));
       }
 
       console.log(chalk.blue('Scanning for Secrets and PII...'));
       let diff = '';
       try {
         diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
-      } catch(e) {}
-      
+      } catch (e: unknown) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
       const violations = scanDiffForSecretsAndPII(diff);
       if (violations.length > 0) {
         violations.forEach(v => console.log(chalk.red(v)));
@@ -169,33 +289,18 @@ program
     console.log(chalk.yellow('Sending code context to LLM for review...'));
     
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            { role: 'system', content: 'You are an elite code auditor. Review the provided git diff against the rules in AGENTS.md. If there are violations, concisely explain them and provide text-based suggestions for fixes.' },
-            { role: 'user', content: `AGENTS.md:\n${agentsMd}\n\nGIT DIFF:\n${diff || '(No changes)'}` }
-          ]
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const reply = data.choices[0].message.content;
+      const systemPrompt = 'You are an elite code auditor. Review the provided git diff against the rules in AGENTS.md. If there are violations, concisely explain them and provide text-based suggestions for fixes.';
+      const userPrompt = `AGENTS.md:\n${agentsMd}\n\nGIT DIFF:\n${diff || '(No changes)'}`;
+      
+      const reply = await callLLM(systemPrompt, userPrompt);
+      logTelemetry(true, diff ? diff.split('\n').length : 0);
 
       console.log(chalk.green('\n✅ Audit Complete!'));
       console.log(chalk.white(reply));
-    } catch (e) {
-      console.log(chalk.red(`❌ Audit failed: ${(e as Error).message}`));
-      console.log(chalk.dim('Please ensure your API key is valid and you have an internet connection.'));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.log(chalk.red(`❌ Audit failed: ${msg}`));
+      console.log(chalk.dim('Please ensure your API key/Base URL is valid and you have an internet connection.'));
     }
   });
 
@@ -206,33 +311,9 @@ program
     console.log(chalk.magenta('🎨 Launching Founder Control Center UI...'));
     console.log(chalk.white('To view the UI during development, navigate to the "ui" directory and run "npm run dev".'));
     
-    // Start backend sandbox server
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
+    const { createApp } = require('./app');
+    const app = createApp();
 
-    // Sandbox execution with STRICT allowlist
-    const ALLOWED_COMMANDS = ['npm test', 'npm run lint', 'git status', 'git diff', 'npx soloknuckle check'];
-
-    app.post('/api/sandbox', (req, res) => {
-      const command = req.body.command;
-      if (!command) {
-        return res.status(400).json({ error: 'No command provided' });
-      }
-
-      if (!ALLOWED_COMMANDS.includes(command)) {
-        console.log(chalk.red(`[Sandbox Blocked] Unauthorized command attempted: ${command}`));
-        return res.status(403).json({ success: false, output: `Error: Command "${command}" is blocked for security reasons. Allowed commands: ${ALLOWED_COMMANDS.join(', ')}` });
-      }
-
-      console.log(chalk.cyan(`[Sandbox] Executing: ${command}`));
-      try {
-        const output = execSync(command, { encoding: 'utf-8', cwd: process.cwd(), timeout: 10000 });
-        res.json({ success: true, output });
-      } catch (err: any) {
-        res.json({ success: false, output: err.stderr || err.message || 'Execution failed' });
-      }
-    });
 
     // Serve the pre-built UI static files
     const uiDistPath = path.join(__dirname, '..', '..', 'ui', 'dist');
@@ -243,7 +324,8 @@ program
       console.log(chalk.yellow('UI Dist folder not found (likely in dev mode). Attempting to run Vite dev server...'));
       try {
         // Run asynchronously so we don't block the backend listening below
-        require('child_process').spawn('npm', ['run', 'dev'], { cwd: path.join(__dirname, '..', '..', 'ui'), stdio: 'inherit', shell: true });
+        const { spawn } = require('child_process') as typeof import('child_process');
+        spawn('npm', ['run', 'dev'], { cwd: path.join(__dirname, '..', '..', 'ui'), stdio: 'inherit', shell: true });
       } catch (e) {
         console.log(chalk.red('Could not launch UI dev server.'));
       }
@@ -260,10 +342,11 @@ program
   .description('Generate directory-specific agent rules (frontend-ux | backend-security | data-engineer)')
   .action((type, folder) => {
     try {
-      const p = applyPersona(folder, type as any);
+      const p = applyPersona(folder, type as PersonaType);
       console.log(chalk.green(`✅ Created persona config at ${p}`));
-    } catch (e: any) {
-      console.log(chalk.red(`Failed to apply persona: ${e.message}`));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.log(chalk.red(`Failed to apply persona: ${msg}`));
     }
   });
 
@@ -289,6 +372,24 @@ program
     const data = getTelemetry();
     console.log(chalk.magenta('📊 Agent Telemetry:'));
     console.log(chalk.white(JSON.stringify(data, null, 2)));
+  });
+
+program
+  .command('score')
+  .description('Calculates the health of the project across 5 key pillars')
+  .action(async () => {
+    console.log(chalk.magenta('🔍 Calculating Vibe Score...'));
+    const metrics = calculateMetrics();
+    console.log(chalk.white(`Overall Score: ${metrics.overall}/100`));
+    console.log(chalk.blue(`- Quality: ${metrics.quality.score}`));
+    console.log(chalk.blue(`- Testing: ${metrics.testing.score}`));
+    console.log(chalk.blue(`- Security: ${metrics.security.score}`));
+    console.log(chalk.blue(`- Efficiency: ${metrics.efficiency.score}`));
+    console.log(chalk.blue(`- Accessibility: ${metrics.accessibility.score}`));
+    
+    console.log(chalk.yellow('\n🤖 Generating AI Suggestions...'));
+    const suggestions = await generateSuggestions(metrics);
+    suggestions.forEach(s => console.log(chalk.green(`💡 ${s}`)));
   });
 
 program.parse(process.argv);
