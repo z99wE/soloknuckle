@@ -1,11 +1,14 @@
 {
-  "name": "production-hygiene",
+  "name": "soloknuckle",
   "version": "1.0.0",
-  "description": "A folder you drop into any project so your AI coding tools (Claude, Codex, Cursor, Replit, Antigravity, Copilot) can never accidentally break your live app.",
+  "description": "Production hygiene CLI — pre-flight checks, secret scanning, agent firewall, and a visual dashboard for any project.",
   "main": "./dist/cli/index.js",
   "bin": {
     "soloknuckle": "./dist/cli/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc && cd ui && npm install --include=dev && npm run build",
     "prepare": "npm run build",
