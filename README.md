@@ -1,102 +1,155 @@
-# Soloknuckle (Production Hygiene Kit)
+# Soloknuckle — Production Hygiene Kit
 
-Soloknuckle is a Production Hygiene CLI & Neo-Brutalist Web Hub that developers drop into any project to enforce production-grade discipline. It prevents you (or your AI coding agents like Cursor, Copilot, Antigravity) from accidentally breaking your live apps.
+Drop this into any project to stop AI agents (and yourself) from breaking production. Pre-flight checks, secret scanning, agent firewall, and a visual dashboard — all local, all free.
 
-## What it CAN do
-
-1. **Scaffold Hygiene Rules**: Runs `soloknuckle init` to instantly add `.cursorrules`, `AGENTS.md`, and CI/CD templates into any project, ensuring all AI agents read the master rules first.
-2. **Branch Protection & Git Hooks**: Installs Git hooks to block direct pushes to `main`.
-3. **Pre-Flight Checks**: Runs `soloknuckle check` to rigorously enforce linters, type checkers, tests (`vitest`), and run intelligent PII & Secret Redaction (blocking API keys and dummy data).
-4. **LLM Code Auditing**: Runs `soloknuckle audit` to use any LLM (local Ollama or cloud OpenAI/Anthropic/Gemini keys) to review uncommitted code against your `AGENTS.md` rules.
-5. **Agent Persona Manager**: Runs `soloknuckle persona <type> <folder>` to enforce bounded contexts by generating directory-specific AI agent rules (e.g. `frontend-ux` vs `backend-security`).
-6. **Agent Telemetry Engine**: Tracks AI vs Human code contributions locally and visualizes them to show your team's real reliance on AI tooling.
-7. **Strict PR Description Enforcer**: Runs `soloknuckle pr` to fetch the git diff and auto-generate a perfectly formatted `PR_DESCRIPTION.md` using the LLM API.
-8. **Automated Rollback Triggers**: Run `soloknuckle watch` to monitor error spikes and automatically toggle feature flags off directly in your codebase.
-9. **Founder Control Center (UI)**: Provides a Neo-Brutalist Web UI (`soloknuckle ui`) to visualize feature flags, launch the Agent Sandbox execution environment, apply personas, and view staging rollbacks without touching code.
-10. **Deterministic Agent Firewall**: Actively intercepts and blocks destructive shell commands (like `rm -rf` or `git push --force`) run by agents in the sandbox, returning a structured JSON error to force the agent to auto-correct.
-11. **Zero Cognitive Load Wizard**: Run `npx soloknuckle` with no arguments to launch an interactive, Neo-Brutalist terminal UI that routes you to features instantly.
-12. **Agent Capabilities Hook**: Exposes `npx soloknuckle capabilities` to act as a machine-readable directory, allowing AI agents to self-discover all commands.
-13. **Agentic IDE Integration**: Instantly transforms your repository into an Agentic OS context root.
-    - **Claude Code**: Generates a `SKILL.md` in your `.gemini/config/skills` directory, effectively teaching Claude that "Soloknuckle" is a native skill it can use.
-    - **Cursor**: Generates a `.cursorrules` file, which intercepts Cursor's context window and tells it to run the hygiene checks.
-    - **Windsurf**: Generates a `.windsurfrules` file with identical context steering.
-    - **Codex / Lovable (MCP)**: Generates an `mcp-config.json` (Model Context Protocol standard) to expose Soloknuckle as a set of tools directly to the LLM's tool-calling interface.
-
-## The Commands
-
-- `soloknuckle check` - The enforcer. Evaluates your current git diff against `.soloknuckle/config.json`. If it fails, your pre-commit hook dies.
-- `soloknuckle config` - Interactive setup to tune the aggression of your agent and configure your local Ollama or cloud LLM.
-- `soloknuckle ui` - Spawns the local web dashboard to manage branch visualizers, toggle features, and test code in a secure sandbox.
-- `soloknuckle score` - Performs a Deep Vibe Check and calculates your Project Health Metrics (0-100) across 5 pillars (Quality, Testing, Security, Efficiency, Accessibility), complete with an AI-generated Action Plan.
-
-## What it CANNOT do
-
-1. **It is NOT a hosting provider**: It manages your staging URLs and rollbacks conceptually via Vercel/Railway, but it does not host the code itself.
-2. **It is NOT a CI pipeline**: It acts as a *local* pre-flight check and rule enforcer. You should still use GitHub Actions or CircleCI for remote validation.
-3. **It does NOT write your application code**: It is a hygiene layer. It scaffolds the guardrails, but you or your AI agent still write the actual features.
-
-## Installation & Setup
-
-You can use Soloknuckle in two distinct ways: as a standalone zero-dependency CLI, or entirely invisibly as a Vite Plugin.
-
-### Option 1: Standalone CLI (Zero-Dependency)
-
-Use `npx` to fetch and run Soloknuckle on the fly without installing it globally. This is perfect for terminal use or CI/CD pipelines.
+## Quick Start (30 seconds)
 
 ```bash
-# 1. Initialize inside any existing project (scaffolds IDE hooks)
+# 1. Go to your project
+cd your-project
+
+# 2. Initialize (adds git hooks + IDE rules)
 npx soloknuckle init
 
-# 2. Launch the visual Founder Control Center
-npx soloknuckle ui
-
-# 3. Run pre-flight checks before pushing
+# 3. Run checks before pushing
 npx soloknuckle check
 ```
 
-### Option 2: The Vite Plugin (Invisible Integration)
+That's it. Your project is now protected.
 
-If you want Soloknuckle to act as an invisible build-time guardian without running CLI commands manually, you can use our Vite Plugin!
+## Works 100% Free — No API Key Needed
 
-First, install the package as a dev dependency:
+Most features work with zero configuration and zero cost:
+
+| Feature | Needs API Key? | Cost |
+|---------|---------------|------|
+| `soloknuckle check` — pre-flight checks | No | Free |
+| `soloknuckle init` — scaffold hooks & rules | No | Free |
+| `soloknuckle ui` — visual dashboard | No | Free |
+| `soloknuckle score` — project health score | No | Free |
+| `soloknuckle telemetry` — AI vs human tracking | No | Free |
+| `soloknuckle persona` — agent bounded contexts | No | Free |
+| `soloknuckle capabilities` — agent self-discovery | No | Free |
+| `soloknuckle watch` — rollback daemon | No | Free |
+| `soloknuckle audit` — LLM code review | **Yes** | Ollama (free) or OpenAI/Anthropic |
+| `soloknuckle pr` — auto PR descriptions | **Yes** | Ollama (free) or OpenAI/Anthropic |
+
+**If you just want the safety net (secret scanning, git hooks, firewall, dashboard) — you need nothing. It just works.**
+
+## All Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `npx soloknuckle` | Interactive wizard — pick what to do |
+| `npx soloknuckle init` | Scaffolds AGENTS.md, git hooks, IDE rules, MCP config |
+| `npx soloknuckle check` | Pre-flight: lint, test, typecheck, secret scan |
+| `npx soloknuckle score` | Project health 0-100 across 5 pillars |
+| `npx soloknuckle audit` | LLM reviews your uncommitted code (needs API key or Ollama) |
+| `npx soloknuckle pr` | Auto-generates PR description from git diff |
+| `npx soloknuckle ui` | Launches web dashboard at localhost:3000 |
+| `npx soloknuckle persona <type> <folder>` | Agent rules for specific directories |
+| `npx soloknuckle watch` | Rollback daemon + webhook listener |
+| `npx soloknuckle telemetry` | View AI vs human contribution stats |
+| `npx soloknuckle capabilities` | Machine-readable command list for AI agents |
+| `npx soloknuckle config` | Configure LLM provider (only if using audit/pr) |
+
+## IDE Integration
+
+Run `npx soloknuckle init` and it automatically creates the right files for your IDE:
+
+### Cursor
+- **File created**: `.cursorrules` in your project root
+- **What it does**: Cursor reads this file and follows the hygiene rules automatically
+- **No setup needed** — just run `init` and Cursor picks it up
+
+### Windsurf
+- **File created**: `.windsurfrules` in your project root
+- **What it does**: Same as Cursor — Windsurf follows the rules automatically
+- **No setup needed**
+
+### Claude Code / Antigravity / Gemini CLI
+- **File created**: `SKILL.md` in your project root
+- **What it does**: Teaches the agent that Soloknuckle is available as a tool
+- **No setup needed** — agents read this file automatically
+
+### Codex / Lovable / Claude Desktop (MCP)
+- **File created**: `mcp-config.json` in your project root
+- **What it does**: Exposes Soloknuckle as MCP tools so the LLM can call them directly
+- **Setup**: Import the MCP config in your tool's settings
+
+### Replit
+- **File created**: `.replit` config
+- **What it does**: Sets `npx soloknuckle ui` as the default run command
+
+### Any Other IDE
+Paste this into your LLM chat:
+> Before doing anything, read AGENTS.md in the project root. Run `npx soloknuckle capabilities` to see available tools. Always run `npx soloknuckle check` before finishing a task.
+
+## Setting Up LLM (Only for audit + pr commands)
+
+If you want AI code review or auto PR descriptions, you have two options:
+
+### Option A: Ollama (Free, Local)
+1. Install Ollama: https://ollama.com
+2. Pull a model: `ollama pull llama3`
+3. Run: `npx soloknuckle config`
+4. Select **Ollama (Local)** — no API key needed
+
+### Option B: Cloud API
+1. Run: `npx soloknuckle config`
+2. Select your provider (OpenAI / Anthropic / Gemini)
+3. Enter your API key
+
+Your key is stored locally in `~/.soloknuckle/config.json`. Never commit this file.
+
+## Can I Keep the Repo Private?
+
+**Yes.** The npm package is self-contained. Users never need access to your GitHub repo. They just run `npx soloknuckle` and everything works locally.
+
+## Security
+
+- API keys stored in `~/.soloknuckle/config.json` (local only, never uploaded)
+- You can also use env var `LLM_API_KEY` instead of storing in file
+- The tool scans YOUR code for secrets — it never sends your code anywhere unless you enable `audit` with a cloud LLM
+- Git hooks block direct pushes to `main`
+- Agent firewall blocks destructive commands (`rm -rf`, `git push --force`, etc.)
+
+## Updating
+
+```bash
+# If installed via npx — always gets latest
+npx soloknuckle check
+
+# If installed as dev dependency
+npm update soloknuckle --save-dev
+```
+
+## Vite Plugin (Invisible Integration)
+
+Use Soloknuckle as a build-time guardian without running CLI commands:
+
 ```bash
 npm install soloknuckle --save-dev
 ```
 
-Then, just drop it into your `vite.config.ts` or `vite.config.js`:
 ```typescript
+// vite.config.ts
 import { defineConfig } from 'vite';
 import soloknucklePlugin from 'soloknuckle/cli/vite-plugin';
 
 export default defineConfig({
   plugins: [
-    soloknucklePlugin() // 🛡️ Automatically runs quality gates & secret scans on build!
+    soloknucklePlugin() // Runs quality gates on every build
   ]
 });
 ```
-Every time your application builds or spins up a dev server, Soloknuckle will silently scan for secrets, enforce linting, and run the telemetry checks in the background.
 
-## Updating
+## What It Does NOT Do
 
-Soloknuckle runs via `npx`, which always fetches the latest published version — no manual update step is needed. If you installed it locally as a dev dependency, update with:
+- **Not a hosting provider** — it manages rollbacks conceptually via Vercel/Railway, doesn't host code
+- **Not a CI pipeline** — use GitHub Actions for remote validation
+- **Doesn't write your code** — it's a hygiene layer, you write the features
 
-```bash
-npm update soloknuckle --save-dev
-```
+## License
 
-The Vite plugin and CLI hooks will pick up the new version on the next build or command run.
-
-## Security Note
-
-Soloknuckle stores your LLM API key locally in `~/.soloknuckle/config.json` in **plaintext**. This is acceptable for a local-only developer tool, but you should:
-
-- Never commit `~/.soloknuckle/config.json` to a shared repository.
-- Never use a production or billing-scoped API key — use a dedicated development key with minimal permissions.
-- Be aware that any process running as your user can read this file.
-
-If you need stricter key management, set the `LLM_API_KEY` environment variable instead and leave the config field blank — the CLI will prefer the env var.
-
-## IDE Integration (The Universal Prompt)
-
-If you are using an IDE that doesn't natively support `.cursorrules` or MCP, paste this into your LLM chat:
-> Before doing anything, read AGENTS.md in the project root. If you need to know what tools are available, run \`npx soloknuckle capabilities\`. Always use \`npx soloknuckle check\` before finishing a task.
+ISC
