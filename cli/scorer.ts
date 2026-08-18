@@ -78,10 +78,11 @@ export function getSecurityScore(): { score: number, rawOutput: string } {
   try {
     let diff = '';
     try {
-      diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
-      if (!diff) diff = execSync('git diff', { encoding: 'utf-8', cwd: process.cwd() });
+      execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
+      diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe' });
+      if (!diff) diff = execSync('git diff', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe' });
     } catch (_e) {
-      // No git diff available
+      // No git repo or no diff available
     }
 
     const violations = scanDiffForSecretsAndPII(diff);

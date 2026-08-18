@@ -7,7 +7,7 @@ vi.mock('../cli/config', () => ({
   loadConfig: vi.fn(),
 }));
 
-import { callLLM } from '../cli/llm-client';
+import { callLLM, resetRateLimit } from '../cli/llm-client';
 import { loadConfig } from '../cli/config';
 
 const mockLoadConfig = vi.mocked(loadConfig);
@@ -24,6 +24,7 @@ describe('callLLM', () => {
   const ORIGINAL_ENV = process.env.LLM_API_KEY;
 
   beforeEach(() => {
+    resetRateLimit();
     mockFetch.mockReset();
     mockLoadConfig.mockReset();
     mockLoadConfig.mockReturnValue({});

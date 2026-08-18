@@ -22,6 +22,10 @@ const DESTRUCTIVE_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\bwget\b.*\|\s*(ba)?sh\b/, reason: 'Piping remote script to shell detected' },
   { pattern: /\bmkfs\b/, reason: 'Filesystem format command detected' },
   { pattern: /\bdd\s+if=.*of=\/dev\/\w/, reason: 'Raw disk write detected' },
+  { pattern: /\|\s*tee\s+/, reason: 'Piping to tee (file write via redirect) detected' },
+  { pattern: />>?\s+\/\S+/, reason: 'Shell output redirect to file detected' },
+  { pattern: /<<\s*\S+/, reason: 'Shell heredoc redirect detected' },
+  { pattern: /\bsudo\s+\w+\s*>/, reason: 'Sudo command with file redirect detected' },
 ];
 
 export interface InterceptionResult {

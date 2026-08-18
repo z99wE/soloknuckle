@@ -76,6 +76,26 @@ export default defineConfig({
 ```
 Every time your application builds or spins up a dev server, Soloknuckle will silently scan for secrets, enforce linting, and run the telemetry checks in the background.
 
+## Updating
+
+Soloknuckle runs via `npx`, which always fetches the latest published version — no manual update step is needed. If you installed it locally as a dev dependency, update with:
+
+```bash
+npm update soloknuckle --save-dev
+```
+
+The Vite plugin and CLI hooks will pick up the new version on the next build or command run.
+
+## Security Note
+
+Soloknuckle stores your LLM API key locally in `~/.soloknuckle/config.json` in **plaintext**. This is acceptable for a local-only developer tool, but you should:
+
+- Never commit `~/.soloknuckle/config.json` to a shared repository.
+- Never use a production or billing-scoped API key — use a dedicated development key with minimal permissions.
+- Be aware that any process running as your user can read this file.
+
+If you need stricter key management, set the `LLM_API_KEY` environment variable instead and leave the config field blank — the CLI will prefer the env var.
+
 ## IDE Integration (The Universal Prompt)
 
 If you are using an IDE that doesn't natively support `.cursorrules` or MCP, paste this into your LLM chat:

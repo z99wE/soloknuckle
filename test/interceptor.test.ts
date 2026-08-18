@@ -110,6 +110,33 @@ describe('interceptCommand', () => {
     expect(result.reason).toContain('Bulk SQL delete');
   });
 
+  it('should block output redirect to file', () => {
+    const result = interceptCommand('echo password > /etc/passwd');
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('redirect');
+  });
+
+  it('should block append redirect to file', () => {
+    const result = interceptCommand('echo secret >> /tmp/log.txt');
+    expect(result.blocked).toBe(true);
+  });
+
+  it('should block tee to file', () => {
+    const result = interceptCommand('npm test | tee /tmp/results.txt');
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('tee');
+  });
+
+  it('should block heredoc', () => {
+    const result = interceptCommand('cat << EOF > /tmp/config.json');
+    expect(result.blocked).toBe(true);
+  });
+
+  it('should block sudo with redirect', () => {
+    const result = interceptCommand('sudo echo hacked > /etc/hosts');
+    expect(result.blocked).toBe(true);
+  });
+
   it('should allow safe commands', () => {
     expect(interceptCommand('npm test').blocked).toBe(false);
     expect(interceptCommand('npm run lint').blocked).toBe(false);

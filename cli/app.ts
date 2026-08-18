@@ -8,10 +8,29 @@ import { loadConfig, saveConfig } from './config';
 import { calculateMetrics } from './scorer';
 import { interceptCommand } from './interceptor';
 
+function createRateLimiter(maxRequests: number, windowMs: number) {
+  const hits = new Map<string, number[]>();
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const timestamps = (hits.get(ip) || []).filter(t => t > now - windowMs);
+    if (timestamps.length >= maxRequests) {
+      res.status(429).json({ error: 'Too many requests. Please try again shortly.' });
+      return;
+    }
+    timestamps.push(now);
+    hits.set(ip, timestamps);
+    next();
+  };
+}
+
 export function createApp() {
   const app = express();
   app.use(cors());
   app.use(express.json());
+
+  const apiLimiter = createRateLimiter(30, 60_000);
+  app.use('/api/', apiLimiter);
 
   const ALLOWED_COMMANDS = ['npm test', 'npm run lint', 'git status', 'git diff', 'npx soloknuckle check'];
   const interceptions: Array<{ time: string; command: string; reason?: string }> = [];
