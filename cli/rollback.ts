@@ -7,7 +7,15 @@ import cors from 'cors';
 
 function verifyWebhookSecret(req: express.Request): boolean {
   const secret = process.env.WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    // Log warning once when server starts
+    if (!(global as Record<string, unknown>).__webhookSecretWarned) {
+      console.log(chalk.yellow('⚠️  WARNING: No WEBHOOK_SECRET configured. Webhook requests will be accepted without verification.'));
+      console.log(chalk.dim('   Set WEBHOOK_SECRET environment variable for production use.'));
+      (global as Record<string, unknown>).__webhookSecretWarned = true;
+    }
+    return true;
+  }
   const signature = req.headers['x-webhook-secret'] || req.headers['x-hub-signature-256'];
   if (!signature) return false;
   const sigBuf = Buffer.from(String(signature));

@@ -241,18 +241,24 @@ program
 
       console.log(chalk.blue('Scanning for Secrets and PII...'));
       let diff = '';
+      let gitAvailable = false;
       try {
+        // Check if we're in a git repository first
+        execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
         diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
+        gitAvailable = true;
       } catch (e: unknown) {
-        // eslint-disable-next-line no-console
-        console.error(e);
+        console.log(chalk.yellow('⚠️ Not a git repository or git not available. Skipping secret/PII scan.'));
       }
-      const violations = scanDiffForSecretsAndPII(diff);
-      if (violations.length > 0) {
-        violations.forEach(v => console.log(chalk.red(v)));
-        throw new Error('Secret/PII scan failed');
-      } else {
-        console.log(chalk.green('✅ No secrets or PII detected.'));
+      
+      if (gitAvailable) {
+        const violations = scanDiffForSecretsAndPII(diff);
+        if (violations.length > 0) {
+          violations.forEach(v => console.log(chalk.red(v)));
+          throw new Error('Secret/PII scan failed');
+        } else {
+          console.log(chalk.green('✅ No secrets or PII detected.'));
+        }
       }
       
       console.log(chalk.cyan('🎉 All quality gates passed! You are clear for takeoff.'));
@@ -268,7 +274,17 @@ program
   .action(async () => {
     console.log(chalk.blue('🤖 Auditing local changes...'));
     
-    const apiKey = await getOrPromptApiKey();
+    let apiKey: string;
+    try {
+      apiKey = await getOrPromptApiKey();
+    } catch (e: unknown) {
+      // Handle ExitPromptError from inquirer when user presses Ctrl+C
+      if (e && typeof e === 'object' && 'name' in e && (e as { name: string }).name === 'ExitPromptError') {
+        console.log(chalk.yellow('\n⚠️ Audit cancelled by user.'));
+        process.exit(1);
+      }
+      throw e;
+    }
 
     console.log(chalk.yellow('Fetching local diff and AGENTS.md...'));
     let diff = '';
@@ -354,7 +370,17 @@ program
   .command('pr')
   .description('Generate strict PR description from git diff')
   .action(async () => {
-    const apiKey = await getOrPromptApiKey();
+    let apiKey: string;
+    try {
+      apiKey = await getOrPromptApiKey();
+    } catch (e: unknown) {
+      // Handle ExitPromptError from inquirer when user presses Ctrl+C
+      if (e && typeof e === 'object' && 'name' in e && (e as { name: string }).name === 'ExitPromptError') {
+        console.log(chalk.yellow('\n⚠️ PR generation cancelled by user.'));
+        process.exit(1);
+      }
+      throw e;
+    }
     await generatePRDescription(apiKey);
   });
 

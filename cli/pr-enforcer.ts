@@ -5,8 +5,17 @@ import { callLLM } from './llm-client';
 import { logTelemetry } from './telemetry';
 
 export async function generatePRDescription(_apiKey: string) {
-  const diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() }) 
-            || execSync('git diff', { encoding: 'utf-8', cwd: process.cwd() });
+  let diff = '';
+  try {
+    // Check if we're in a git repository first
+    execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
+    diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() }) 
+              || execSync('git diff', { encoding: 'utf-8', cwd: process.cwd() });
+  } catch (e: unknown) {
+    console.log(chalk.red('❌ Not a git repository or git not available.'));
+    console.log(chalk.dim('The "pr" command requires a git repository to generate a PR description.'));
+    return;
+  }
             
   if (!diff) {
     console.log(chalk.red('No diff found to generate PR description.'));
