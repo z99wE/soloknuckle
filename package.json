@@ -4,7 +4,8 @@
   "description": "Production hygiene CLI — pre-flight checks, secret scanning, agent firewall, and a visual dashboard for any project.",
   "main": "./dist/cli/index.js",
   "bin": {
-    "soloknuckle": "./dist/cli/index.js"
+    "soloknuckle": "./dist/cli/index.js",
+    "soloknuckle-mcp": "./dist/cli/mcp-server.js"
   },
   "files": [
     "dist"

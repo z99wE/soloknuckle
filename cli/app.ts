@@ -171,7 +171,7 @@ export function createApp() {
 
     // If we deleted the active provider, fall back to the first remaining one
     if (config.activeProviderId === req.params.id) {
-      config.activeProviderId = config.providers[0]?.id || null;
+      config.activeProviderId = config.providers[0]?.id || undefined;
       // Sync legacy fields if a provider is still active
       if (config.activeProviderId) {
         const fallback = config.providers.find(p => p.id === config.activeProviderId);

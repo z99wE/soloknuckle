@@ -302,8 +302,9 @@ npm run test -- --coverage
 | `test/scanner.test.ts` | 15 | 100% |
 | `test/pr-enforcer.test.ts` | 4 | 85% |
 | `test/rollback.test.ts` | 12 | 0% |
+| `test/mcp-server.test.ts` | 17 | 100% |
 | `test/e2e.test.ts` | 1 | 100% |
-| **Total** | **179** | **77%** |
+| **Total** | **196** | **78%** |
 
 ---
 
@@ -339,6 +340,63 @@ export default defineConfig({
     soloknucklePlugin() // Runs quality gates on every build
   ]
 });
+```
+
+---
+
+## MCP Server (Model Context Protocol)
+
+Soloknuckle ships with an MCP server that lets AI coding agents (Claude, Cursor, Windsurf, etc.) call Soloknuckle tools directly.
+
+### Setup
+
+Add to your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "soloknuckle": {
+      "command": "soloknuckle-mcp"
+    }
+  }
+}
+```
+
+Or for Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "soloknuckle": {
+      "command": "npx",
+      "args": ["soloknuckle-mcp"]
+    }
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `soloknuckle_score` | Get project health score (0-100) with per-category breakdown |
+| `soloknuckle_telemetry` | Get AI vs human contribution telemetry |
+| `soloknuckle_intercept` | Check if a shell command is safe or destructive |
+| `soloknuckle_secrets` | Scan a git diff for secrets, API keys, and PII |
+| `soloknuckle_flags` | Read all feature flags and their state |
+| `soloknuckle_flag_set` | Enable or disable a feature flag |
+| `soloknuckle_suggest` | Get AI-powered improvement suggestions |
+| `soloknuckle_branches` | List local git branches |
+
+### Example: Agent Checks Score Before Coding
+
+```
+Agent: soloknuckle_score
+Server: { "overall": 82, "quality": 90, "testing": 100, "security": 70, ... }
+Agent: "Security is low. Let me check for secrets..."
+Agent: soloknuckle_secrets { "diff": "" }
+Server: { "clean": false, "violations": ["Line 5: Potential secret detected"] }
+Agent: "Found a secret. Fixing it before proceeding."
 ```
 
 ---
