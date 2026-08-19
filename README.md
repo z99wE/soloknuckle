@@ -1,118 +1,317 @@
-# Soloknuckle — Production Hygiene Kit
+# Soloknuckle
 
-Drop this into any project to stop AI agents (and yourself) from breaking production. Pre-flight checks, secret scanning, agent firewall, and a visual dashboard — all local, all free.
+**Production Hygiene Kit for AI-Assisted Development**
 
-## Quick Start (30 seconds)
+A local-first safety layer that prevents AI agents (and humans) from breaking production. Secret scanning, command firewall, pre-flight checks, and a visual dashboard — zero configuration, zero cost.
 
-```bash
-# 1. Go to your project
-cd your-project
+---
 
-# 2. Initialize (adds git hooks + IDE rules)
-npx soloknuckle init
+## Table of Contents
 
-# 3. Run checks before pushing
-npx soloknuckle check
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Commands Reference](#commands-reference)
+- [IDE Integration](#ide-integration)
+- [LLM Configuration](#llm-configuration)
+- [Security Model](#security-model)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        SOLOKNUCKLE CLI                              │
+│                                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │  init    │  │  check   │  │  score   │  │   audit  │           │
+│  │ (scaffold│  │(pre-     │  │(health   │  │  (LLM    │           │
+│  │  hooks)  │  │ flight)  │  │  0-100)  │  │  review) │           │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘           │
+│       │              │              │              │                 │
+│       ▼              ▼              ▼              ▼                 │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                    CORE MODULES                              │   │
+│  │                                                              │   │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐            │   │
+│  │  │ scanner    │  │ interceptor│  │  scorer    │            │   │
+│  │  │ (secret    │  │ (command   │  │ (project   │            │   │
+│  │  │  detection)│  │  firewall) │  │  health)   │            │   │
+│  │  └────────────┘  └────────────┘  └────────────┘            │   │
+│  │                                                              │   │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐            │   │
+│  │  │ config     │  │ telemetry  │  │  rollback  │            │   │
+│  │  │ (provider  │  │ (AI vs     │  │ (auto      │            │   │
+│  │  │  registry) │  │  human)    │  │  revert)   │            │   │
+│  │  └────────────┘  └────────────┘  └────────────┘            │   │
+│  │                                                              │   │
+│  │  ┌────────────┐  ┌────────────┐                             │   │
+│  │  │ personas   │  │ llm-client │                             │   │
+│  │  │ (bounded   │  │ (multi-    │                             │   │
+│  │  │  context)  │  │  provider) │                             │   │
+│  │  └────────────┘  └────────────┘                             │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                     EXPRESS API                              │   │
+│  │                                                              │   │
+│  │  GET  /api/config         →  Provider configuration          │   │
+│  │  POST /api/config         →  Save provider settings          │   │
+│  │  POST /api/sandbox        →  Safe command execution          │   │
+│  │  POST /api/score          →  Project health analysis         │   │
+│  │  POST /api/audit          →  LLM code review                │   │
+│  │  POST /api/pr/description →  Auto PR description             │   │
+│  │  GET  /api/telemetry      →  AI vs human stats               │   │
+│  │  POST /api/persona/write  →  Write persona files             │   │
+│  │  POST /api/persona/delete →  Delete persona files            │   │
+│  │  POST /api/capabilities   →  Machine-readable tool list      │   │
+│  │                                                              │   │
+│  │  Security: Rate limiting, CORS, body size limits             │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                  VITE + REACT DASHBOARD                     │   │
+│  │                                                              │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │   │
+│  │  │ Provider │  │ Project  │  │ Command  │                  │   │
+│  │  │ Settings │  │ Health   │  │ Firewall │                  │   │
+│  │  └──────────┘  └──────────┘  └──────────┘                  │   │
+│  │                                                              │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │   │
+│  │  │ LLM      │  │ PR       │  │ Telemetry│                  │   │
+│  │  │ Audit    │  │ Describer│  │ Dashboard│                  │   │
+│  │  └──────────┘  └──────────┘  └──────────┘                  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+
+                         ┌─────────────────┐
+                         │   DATA FLOW     │
+                         └─────────────────┘
+
+User/Agent ──▶ CLI Command ──▶ Core Module ──▶ Express API ──▶ Dashboard
+                  │                │                │
+                  ▼                ▼                ▼
+              Git Hooks      File System      Browser UI
+              (pre-commit)   (~/.soloknuckle/)  (localhost:3000)
 ```
 
-That's it. Your project is now protected.
+---
 
-## Works 100% Free — No API Key Needed
+## Quick Start
 
-Most features work with zero configuration and zero cost:
+```bash
+# Install and initialize (adds git hooks + IDE rules)
+cd your-project
+npx soloknuckle init
 
-| Feature | Needs API Key? | Cost |
-|---------|---------------|------|
-| `soloknuckle check` — pre-flight checks | No | Free |
-| `soloknuckle init` — scaffold hooks & rules | No | Free |
-| `soloknuckle ui` — visual dashboard | No | Free |
-| `soloknuckle score` — project health score | No | Free |
-| `soloknuckle telemetry` — AI vs human tracking | No | Free |
-| `soloknuckle persona` — agent bounded contexts | No | Free |
-| `soloknuckle capabilities` — agent self-discovery | No | Free |
-| `soloknuckle watch` — rollback daemon | No | Free |
-| `soloknuckle audit` — LLM code review | **Yes** | Ollama (free) or OpenAI/Anthropic |
-| `soloknuckle pr` — auto PR descriptions | **Yes** | Ollama (free) or OpenAI/Anthropic |
+# Run pre-flight checks before pushing
+npx soloknuckle check
 
-**If you just want the safety net (secret scanning, git hooks, firewall, dashboard) — you need nothing. It just works.**
+# Launch visual dashboard
+npx soloknuckle ui
+```
 
-## All Commands
+---
 
-| Command | What It Does |
-|---------|-------------|
-| `npx soloknuckle` | Interactive wizard — pick what to do |
-| `npx soloknuckle init` | Scaffolds AGENTS.md, git hooks, IDE rules, MCP config |
-| `npx soloknuckle check` | Pre-flight: lint, test, typecheck, secret scan |
-| `npx soloknuckle score` | Project health 0-100 across 5 pillars |
-| `npx soloknuckle audit` | LLM reviews your uncommitted code (needs API key or Ollama) |
-| `npx soloknuckle pr` | Auto-generates PR description from git diff |
-| `npx soloknuckle ui` | Launches web dashboard at localhost:3000 |
-| `npx soloknuckle persona <type> <folder>` | Agent rules for specific directories |
-| `npx soloknuckle watch` | Rollback daemon + webhook listener |
-| `npx soloknuckle telemetry` | View AI vs human contribution stats |
-| `npx soloknuckle capabilities` | Machine-readable command list for AI agents |
-| `npx soloknuckle config` | Configure LLM provider (only if using audit/pr) |
+## Commands Reference
+
+### Core Commands (Free, No API Key)
+
+| Command | Description | Output |
+|---------|-------------|--------|
+| `npx soloknuckle init` | Scaffolds AGENTS.md, git hooks, IDE rules, MCP config | Files created in project |
+| `npx soloknuckle check` | Pre-flight: lint, test, typecheck, secret scan | Pass/fail report |
+| `npx soloknuckle score` | Project health 0-100 across 5 pillars | Numeric score + breakdown |
+| `npx soloknuckle ui` | Launches web dashboard | http://localhost:3000 |
+| `npx soloknuckle telemetry` | AI vs human contribution stats | Stats report |
+| `npx soloknuckle persona <type> <folder>` | Agent rules for specific directories | Persona files |
+| `npx soloknuckle capabilities` | Machine-readable command list for AI agents | JSON output |
+| `npx soloknuckle watch` | Rollback daemon + webhook listener | Daemon process |
+
+### LLM Commands (Requires API Key or Ollama)
+
+| Command | Description | Cost |
+|---------|-------------|------|
+| `npx soloknuckle audit` | LLM reviews your uncommitted code | Free (Ollama) or API |
+| `npx soloknuckle pr` | Auto-generates PR description from git diff | Free (Ollama) or API |
+
+---
 
 ## IDE Integration
 
 Run `npx soloknuckle init` and it automatically creates the right files for your IDE:
 
-### Cursor
-- **File created**: `.cursorrules` in your project root
-- **What it does**: Cursor reads this file and follows the hygiene rules automatically
-- **No setup needed** — just run `init` and Cursor picks it up
+| IDE | File Created | Setup Required |
+|-----|--------------|----------------|
+| **Cursor** | `.cursorrules` | None — auto-detected |
+| **Windsurf** | `.windsurfrules` | None — auto-detected |
+| **Claude Code / Gemini CLI** | `SKILL.md` | None — auto-detected |
+| **Codex / Lovable / Claude Desktop** | `mcp-config.json` | Import MCP config in settings |
+| **Replit** | `.replit` | None — default run command set |
+| **Any Other IDE** | Paste prompt in chat | See below |
 
-### Windsurf
-- **File created**: `.windsurfrules` in your project root
-- **What it does**: Same as Cursor — Windsurf follows the rules automatically
-- **No setup needed**
+**Universal Prompt for Any IDE:**
 
-### Claude Code / Antigravity / Gemini CLI
-- **File created**: `SKILL.md` in your project root
-- **What it does**: Teaches the agent that Soloknuckle is available as a tool
-- **No setup needed** — agents read this file automatically
-
-### Codex / Lovable / Claude Desktop (MCP)
-- **File created**: `mcp-config.json` in your project root
-- **What it does**: Exposes Soloknuckle as MCP tools so the LLM can call them directly
-- **Setup**: Import the MCP config in your tool's settings
-
-### Replit
-- **File created**: `.replit` config
-- **What it does**: Sets `npx soloknuckle ui` as the default run command
-
-### Any Other IDE
-Paste this into your LLM chat:
 > Before doing anything, read AGENTS.md in the project root. Run `npx soloknuckle capabilities` to see available tools. Always run `npx soloknuckle check` before finishing a task.
 
-## Setting Up LLM (Only for audit + pr commands)
+---
 
-If you want AI code review or auto PR descriptions, you have two options:
+## LLM Configuration
+
+Only required if you want AI code review (`audit`) or auto PR descriptions (`pr`).
 
 ### Option A: Ollama (Free, Local)
-1. Install Ollama: https://ollama.com
-2. Pull a model: `ollama pull llama3`
-3. Run: `npx soloknuckle config`
-4. Select **Ollama (Local)** — no API key needed
+
+```bash
+# 1. Install Ollama
+brew install ollama  # macOS
+# or: https://ollama.com/download
+
+# 2. Pull a model
+ollama pull llama3
+
+# 3. Configure Soloknuckle
+npx soloknuckle config
+# Select: Ollama (Local) — no API key needed
+```
 
 ### Option B: Cloud API
-1. Run: `npx soloknuckle config`
-2. Select your provider (OpenAI / Anthropic / Gemini)
-3. Enter your API key
 
-Your key is stored locally in `~/.soloknuckle/config.json`. Never commit this file.
+```bash
+# 1. Configure Soloknuckle
+npx soloknuckle config
+# Select: OpenAI / Anthropic / Gemini
+# Enter your API key when prompted
+```
+
+**Supported Providers:** OpenAI, Anthropic, Google Gemini, Ollama, Azure OpenAI, DeepSeek, Groq, Mistral, OpenRouter, Together AI, xAI
+
+**Key Storage:** `~/.soloknuckle/config.json` (local only, never uploaded)
+
+---
+
+## Security Model
+
+### What It Protects Against
+
+| Threat | Mitigation |
+|--------|------------|
+| Secret leakage | Scans for API keys, tokens, credentials in code |
+| Destructive commands | Firewall blocks `rm -rf`, `git push --force`, SQL drops |
+| Path traversal | Persona system validates directory boundaries |
+| API key exposure | Keys stored locally, never committed to git |
+| Rate limiting | Prevents abuse of LLM API endpoints |
+| CORS attacks | Restricted to localhost origins only |
+
+### Command Firewall Patterns
+
+The interceptor blocks these destructive patterns:
+
+- `sudo rm`, `rm -rf`, `rm -fr`, `rm -r -f`, `rm -f -r`
+- `DROP DATABASE`, `DELETE FROM ... WHERE`, `TRUNCATE TABLE`
+- `git push --force`, `git push -f`, `git reset --hard`
+- `chmod 777`, `chmod -R 777`
+- `curl ... | sh`, `wget ... | bash`
+- `dd if=... of=/dev/...`
+- `mkfs.*`, `mv ... /dev/null`
+- Shell redirects (`>>`, `>`, heredoc)
+
+---
+
+## Project Structure
+
+```
+soloknuckle/
+├── cli/                          # Core CLI modules
+│   ├── index.ts                  # Entry point + command router
+│   ├── app.ts                    # Express API server
+│   ├── config.ts                 # Configuration + provider registry
+│   ├── scanner.ts                # Secret detection engine
+│   ├── interceptor.ts            # Command firewall
+│   ├── scorer.ts                 # Project health scoring
+│   ├── llm-client.ts             # Multi-provider LLM client
+│   ├── telemetry.ts              # AI vs human tracking
+│   ├── rollback.ts               # Auto-rollback daemon
+│   ├── personas.ts               # Agent bounded contexts
+│   ├── pr-enforcer.ts            # PR description generator
+│   └── vite-plugin.ts            # Vite build-time integration
+├── ui/                           # React dashboard
+│   ├── src/
+│   │   ├── App.jsx               # Main dashboard component
+│   │   ├── index.css             # Neo-brutalist styling
+│   │   └── main.jsx              # React entry point
+│   └── index.html                # HTML shell
+├── test/                         # Test suite
+│   ├── api.test.ts               # API endpoint tests
+│   ├── config.test.ts            # Config loading tests
+│   ├── interceptor.test.ts       # Firewall pattern tests
+│   ├── llm-client.test.ts        # LLM client tests
+│   ├── personas.test.ts          # Persona system tests
+│   ├── telemetry.test.ts         # Telemetry tests
+│   └── ...                       # Additional test files
+├── git-hooks/                    # Git hook scripts
+│   ├── pre-commit                # Runs checks before commit
+│   └── commit-msg                # Validates commit messages
+├── templates/                    # Feature flag templates
+│   ├── feature-flag.ts
+│   ├── feature-flag.api.ts
+│   ├── feature-flag.backend.ts
+│   ├── feature-flag.tsx
+│   └── flags.json
+├── scripts/                      # Setup scripts
+│   ├── setup-github.sh
+│   ├── setup-vercel.sh
+│   └── setup-railway.sh
+├── AGENTS.md                     # Agent behavior rules
+├── SKILL.md                      # Claude Code skill definition
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+## Testing
+
+### Run All Tests
+
+```bash
+npm test
+```
+
+### Run with Coverage
+
+```bash
+npm run test -- --coverage
+```
+
+### Test Files
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `test/interceptor.test.ts` | 28 | 100% |
+| `test/personas.test.ts` | 7 | 100% |
+| `test/telemetry.test.ts` | 7 | 100% |
+| `test/llm-client.test.ts` | 22 | 86% |
+| `test/api.test.ts` | 35 | 79% |
+| `test/config.test.ts` | 21 | 88% |
+| `test/scorer.test.ts` | 27 | 80% |
+| `test/scanner.test.ts` | 15 | 100% |
+| `test/pr-enforcer.test.ts` | 4 | 85% |
+| `test/rollback.test.ts` | 12 | 0% |
+| `test/e2e.test.ts` | 1 | 100% |
+| **Total** | **179** | **77%** |
+
+---
 
 ## Can I Keep the Repo Private?
 
 **Yes.** The npm package is self-contained. Users never need access to your GitHub repo. They just run `npx soloknuckle` and everything works locally.
 
-## Security
-
-- API keys stored in `~/.soloknuckle/config.json` (local only, never uploaded)
-- You can also use env var `LLM_API_KEY` instead of storing in file
-- The tool scans YOUR code for secrets — it never sends your code anywhere unless you enable `audit` with a cloud LLM
-- Git hooks block direct pushes to `main`
-- Agent firewall blocks destructive commands (`rm -rf`, `git push --force`, etc.)
+---
 
 ## Updating
 
@@ -124,13 +323,11 @@ npx soloknuckle check
 npm update soloknuckle --save-dev
 ```
 
+---
+
 ## Vite Plugin (Invisible Integration)
 
 Use Soloknuckle as a build-time guardian without running CLI commands:
-
-```bash
-npm install soloknuckle --save-dev
-```
 
 ```typescript
 // vite.config.ts
@@ -144,11 +341,16 @@ export default defineConfig({
 });
 ```
 
+---
+
 ## What It Does NOT Do
 
-- **Not a hosting provider** — it manages rollbacks conceptually via Vercel/Railway, doesn't host code
+- **Not a hosting provider** — manages rollbacks conceptually via Vercel/Railway, doesn't host code
 - **Not a CI pipeline** — use GitHub Actions for remote validation
 - **Doesn't write your code** — it's a hygiene layer, you write the features
+- **Doesn't send your code anywhere** — all checks run locally unless you explicitly enable cloud LLM audit
+
+---
 
 ## License
 
