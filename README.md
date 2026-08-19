@@ -441,7 +441,7 @@ GitHub Actions workflow runs on every PR:
 - Security audit (`npm audit`)
 - Type checking (`tsc --noEmit`)
 - Linting (`eslint`)
-- Tests across Node.js 18, 20, 22
+- Tests across Node.js 20, 22
 
 Actions are pinned to specific commit SHAs to prevent upstream compromise.
 

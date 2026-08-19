@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soloknuckle — Production Hygiene for AI-Assisted Development</title>
+  <meta name="description" content="The quality gate for AI-generated code. Secret scanning, command firewall, pre-flight checks, and a visual dashboard — zero configuration, zero cost.">
+  <meta name="keywords" content="AI code quality, production hygiene, code review, developer tools, pre-flight checks, secret scanning, CI/CD, vibe coding, AI safety">
+  <meta name="author" content="Soloknuckle">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://soloknuckle.dev">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Soloknuckle — Production Hygiene for AI-Assisted Development">
+  <meta property="og:description" content="The quality gate for AI-generated code. Secret scanning, command firewall, pre-flight checks, and a visual dashboard — zero configuration, zero cost.">
+  <meta property="og:url" content="https://soloknuckle.dev">
+  <meta property="og:image" content="https://soloknuckle.dev/og-image.png">
+  <meta property="og:site_name" content="Soloknuckle">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Soloknuckle — Production Hygiene for AI-Assisted Development">
+  <meta name="twitter:description" content="The quality gate for AI-generated code. Secret scanning, command firewall, pre-flight checks, and a visual dashboard.">
+  <meta name="twitter:image" content="https://soloknuckle.dev/og-image.png">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Soloknuckle",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Node.js 20+",
+    "description": "Production hygiene CLI for AI-assisted development. Secret scanning, command firewall, pre-flight checks, and a visual dashboard.",
+    "url": "https://soloknuckle.dev",
+    "downloadUrl": "https://www.npmjs.com/package/soloknuckle",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "softwareVersion": "1.0.0",
+    "fileSize": "120KB",
+    "screenshot": "https://soloknuckle.dev/og-image.png"
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --bg-alt: #ebe5d9;
+      --fg: #1a1a1a;
+      --fg-muted: #555;
+      --accent: #0055ff;
+      --accent-light: #e8f0ff;
+      --border: #1a1a1a;
+      --border-w: 2px;
+      --radius: 0;
+      --shadow: 4px 4px 0 #1a1a1a;
+      --shadow-sm: 2px 2px 0 #1a1a1a;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --max-w: 1100px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --bg-alt: #161b22;
+        --fg: #e6edf3;
+        --fg-muted: #8b949e;
+        --accent: #58a6ff;
+        --accent-light: #1a2332;
+        --border: #e6edf3;
+        --shadow: 4px 4px 0 #e6edf3;
+        --shadow-sm: 2px 2px 0 #e6edf3;
+      }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── NAV ────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: var(--border-w) solid var(--border);
+      padding: 16px 0;
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-decoration: none;
+      color: var(--fg);
+      letter-spacing: -0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--fg-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .nav-cta {
+      background: var(--fg);
+      color: var(--bg) !important;
+      padding: 8px 16px;
+      font-weight: 600;
+      border: var(--border-w) solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .nav-cta:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 5px 5px 0 var(--border);
+    }
+
+    /* ── HERO ────────────────────────────────── */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 6px 14px;
+      border: var(--border-w) solid var(--border);
+      margin-bottom: 24px;
+      background: var(--accent-light);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 20px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+      text-decoration: underline;
+      text-decoration-thickness: 3px;
+      text-underline-offset: 6px;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--fg-muted);
+      max-width: 560px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      font-family: var(--font);
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 14px 28px;
+      border: var(--border-w) solid var(--border);
+      box-shadow: var(--shadow);
+      transition: transform 0.1s, box-shadow 0.1s;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--border);
+    }
+
+    .btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0 0 0 var(--border);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .hero-install {
+      margin-top: 40px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      padding: 14px 24px;
+      background: var(--bg-alt);
+      border: var(--border-w) solid var(--border);
+      display: inline-block;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero-install .prompt {
+      color: var(--accent);
+      margin-right: 8px;
+    }
+
+    /* ── SOCIAL PROOF ────────────────────────── */
+    .social-proof {
+      padding: 40px 0;
+      text-align: center;
+      border-bottom: var(--border-w) solid var(--border);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ── SECTION HEADERS ────────────────────── */
+    .section {
+      padding: 80px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    .section-header p {
+      color: var(--fg-muted);
+      max-width: 540px;
+      margin: 0 auto;
+      font-size: 1.05rem;
+    }
+
+    /* ── PROBLEM ─────────────────────────────── */
+    .problem {
+      background: var(--bg-alt);
+      border-top: var(--border-w) solid var(--border);
+      border-bottom: var(--border-w) solid var(--border);
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+
+    .problem-card {
+      border: var(--border-w) solid var(--border);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      background: var(--bg);
+    }
+
+    .problem-card h3 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .problem-card p {
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+
+    .problem-icon {
+      font-size: 1.3rem;
+    }
+
+    /* ── FEATURES ────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      border: var(--border-w) solid var(--border);
+      padding: 32px;
+      box-shadow: var(--shadow);
+      background: var(--bg);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .feature-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--border);
+    }
+
+    .feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+
+    .feature-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border: var(--border-w) solid var(--border);
+      margin-top: 14px;
+      background: var(--accent-light);
+    }
+
+    /* ── HOW IT WORKS ────────────────────────── */
+    .how-it-works {
+      background: var(--bg-alt);
+      border-top: var(--border-w) solid var(--border);
+      border-bottom: var(--border-w) solid var(--border);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .step {
+      text-align: center;
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      font-size: 1.3rem;
+      font-weight: 900;
+      border: var(--border-w) solid var(--border);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 16px;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .step h3 {
+      font-size: 1rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      line-height: 1.5;
+    }
+
+    .step code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--bg);
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* ── COMMANDS TABLE ──────────────────────── */
+    .commands-section {
+      padding: 80px 0;
+    }
+
+    .commands-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: var(--border-w) solid var(--border);
+      box-shadow: var(--shadow);
+      font-size: 0.9rem;
+      margin-top: 32px;
+    }
+
+    .commands-table th,
+    .commands-table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .commands-table th {
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    .commands-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .commands-table tr:nth-child(even) td {
+      background: var(--bg-alt);
+    }
+
+    .commands-table code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--accent-light);
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+    }
+
+    .badge-free {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border: 1px solid #22c55e;
+      color: #16a34a;
+      font-weight: 700;
+    }
+
+    .badge-llm {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ── SECURITY ────────────────────────────── */
+    .security {
+      background: var(--bg-alt);
+      border-top: var(--border-w) solid var(--border);
+      border-bottom: var(--border-w) solid var(--border);
+    }
+
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .security-item {
+      border: var(--border-w) solid var(--border);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      background: var(--bg);
+    }
+
+    .security-item h4 {
+      font-size: 0.95rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .security-item p {
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+      line-height: 1.5;
+    }
+
+    /* ── IDE ─────────────────────────────────── */
+    .ide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+
+    .ide-card {
+      border: var(--border-w) solid var(--border);
+      padding: 20px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      background: var(--bg);
+    }
+
+    .ide-card h4 {
+      font-size: 0.95rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .ide-card p {
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+    }
+
+    .ide-card code {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      display: block;
+      margin-top: 10px;
+      padding: 6px;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      word-break: break-all;
+    }
+
+    /* ── QUOTE ───────────────────────────────── */
+    .quote-section {
+      padding: 80px 0;
+      text-align: center;
+    }
+
+    .quote {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.5;
+      max-width: 600px;
+      margin: 0 auto 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .quote::before { content: '"'; }
+    .quote::after { content: '"'; }
+
+    .quote-attr {
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      font-style: italic;
+    }
+
+    /* ── CTA ─────────────────────────────────── */
+    .cta {
+      padding: 80px 0;
+      text-align: center;
+      background: var(--fg);
+      color: var(--bg);
+      border-top: var(--border-w) solid var(--border);
+    }
+
+    .cta h2 {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    .cta p {
+      color: var(--bg-alt);
+      font-size: 1.05rem;
+      max-width: 500px;
+      margin: 0 auto 32px;
+    }
+
+    .cta .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .cta .hero-install {
+      margin-top: 32px;
+      background: #1a2332;
+      color: var(--bg);
+      border-color: var(--bg);
+    }
+
+    .cta .hero-install .prompt {
+      color: var(--accent);
+    }
+
+    /* ── FOOTER ──────────────────────────────── */
+    footer {
+      padding: 40px 0;
+      border-top: var(--border-w) solid var(--border);
+      text-align: center;
+    }
+
+    footer .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      text-decoration: none;
+      color: var(--fg-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .footer-links a:hover { color: var(--accent); }
+
+    .footer-copy {
+      font-size: 0.75rem;
+      color: var(--fg-muted);
+    }
+
+    /* ── RESPONSIVE ──────────────────────────── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero { padding: 50px 0 40px; }
+      .hero h1 { letter-spacing: -1px; }
+      .stats { gap: 24px; }
+      .commands-table { font-size: 0.8rem; }
+      .commands-table th,
+      .commands-table td { padding: 10px 12px; }
+      .cta { padding: 50px 0; }
+      .footer-links { flex-wrap: wrap; justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-actions { flex-direction: column; align-items: center; }
+      .hero-install { font-size: 0.85rem; }
+      .section { padding: 50px 0; }
+    }
+
+    /* ── ANIMATIONS ──────────────────────────── */
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fade-in 0.6s ease-out both;
+    }
+
+    .fade-in-delay-1 { animation-delay: 0.1s; }
+    .fade-in-delay-2 { animation-delay: 0.2s; }
+    .fade-in-delay-3 { animation-delay: 0.3s; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="container">
+      <a href="/" class="nav-brand">soloknuckle</a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#commands">Commands</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="https://github.com/z99wE/soloknuckle" class="nav-cta">GitHub</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">Open Source &middot; MIT Licensed &middot; 291 Tests Passing</div>
+      <h1 class="fade-in">Stop shipping code<br>that <em>breaks in prod</em></h1>
+      <p class="fade-in fade-in-delay-1">Soloknuckle is the quality gate for AI-generated code. It catches security holes, bad patterns, and production risks before they ship — so you can build with confidence.</p>
+      <div class="hero-actions fade-in fade-in-delay-2">
+        <a href="#get-started" class="btn btn-primary">Get Started Free</a>
+        <a href="https://github.com/z99wE/soloknuckle" class="btn btn-secondary">View on GitHub</a>
+      </div>
+      <div class="hero-install fade-in fade-in-delay-3">
+        <span class="prompt">$</span>npx soloknuckle init
+      </div>
+    </div>
+  </section>
+
+  <!-- SOCIAL PROOF -->
+  <section class="social-proof">
+    <div class="container">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-number">10</div>
+          <div class="stat-label">Hygiene Dimensions</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">8</div>
+          <div class="stat-label">Hygiene Checks</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">8</div>
+          <div class="stat-label">MCP Tools</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">291</div>
+          <div class="stat-label">Tests Passing</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">$0</div>
+          <div class="stat-label">Forever</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem section" id="problem">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">The Problem</div>
+        <h2>AI writes fast.<br>Fast isn't always safe.</h2>
+        <p>You're shipping faster than ever. But speed without guardrails leaves production exposed.</p>
+      </div>
+      <div class="problem-grid">
+        <div class="problem-card">
+          <h3><span class="problem-icon">🔑</span> Secrets in Code</h3>
+          <p>AI assistants happily paste API keys, tokens, and credentials directly into your codebase. One git push and they're public.</p>
+        </div>
+        <div class="problem-card">
+          <h3><span class="problem-icon">💥</span> Destructive Commands</h3>
+          <p>A single <code>rm -rf</code> or <code>git push --force</code> from an overeager agent can wipe out hours of work in seconds.</p>
+        </div>
+        <div class="problem-card">
+          <h3><span class="problem-icon">🔒</span> No Pre-Flight Check</h3>
+          <p>You merge, deploy, and find out on Friday night that type checking, linting, and tests were all skipped.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Features</div>
+        <h2>Everything you need<br>to ship safely.</h2>
+        <p>10 dimensions of production hygiene, one command away.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">🛡️</span>
+          <h3>Secret Scanning</h3>
+          <p>Detects API keys, tokens, credentials, and PII in your code before they reach git history. Supports 50+ secret patterns.</p>
+          <span class="feature-tag">Core</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔥</span>
+          <h3>Command Firewall</h3>
+          <p>Blocks destructive shell commands — <code>rm -rf</code>, <code>git push --force</code>, SQL drops, <code>chmod 777</code>. Intercepts before execution.</p>
+          <span class="feature-tag">Core</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🤖</span>
+          <h3>AI Watcher</h3>
+          <p>Detects AI-generated commits automatically. Branches AI-approved code separately. Tracks AI vs human contribution ratio.</p>
+          <span class="feature-tag">Intelligence</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📊</span>
+          <h3>Project Health Score</h3>
+          <p>0–100 score across 10 dimensions: quality, testing, security, efficiency, accessibility, dependencies, documentation, and more.</p>
+          <span class="feature-tag">Analytics</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🧠</span>
+          <h3>LLM Code Audit</h3>
+          <p>AI-powered review of your uncommitted changes against AGENTS.md rules. Supports OpenAI, Anthropic, Gemini, and 10+ providers.</p>
+          <span class="feature-tag">AI-Powered</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">💰</span>
+          <h3>Budget Guard</h3>
+          <p>Set daily limits on API calls, edits, commits, and deploys. Prevents runaway AI agents from burning resources.</p>
+          <span class="feature-tag">Governance</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔄</span>
+          <h3>Auto Rollback</h3>
+          <p>Monitors Sentry webhooks and Vercel/Railway deployments. Auto-reverts when health checks fail. Sleep better at night.</p>
+          <span class="feature-tag">Reliability</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔌</span>
+          <h3>MCP Server</h3>
+          <p>8 tools for AI coding agents — score, secrets, intercept, flags, telemetry. Agents can self-check before writing code.</p>
+          <span class="feature-tag">Integration</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🎨</span>
+          <h3>Visual Dashboard</h3>
+          <p>Neo-brutalist web UI for project health, telemetry, command firewall logs, and LLM configuration. Run locally on port 3000.</p>
+          <span class="feature-tag">Interface</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works section" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">How It Works</div>
+        <h2>Three commands.<br>Zero configuration.</h2>
+        <p>From install to protected in under a minute.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Initialize</h3>
+          <p>Scaffolds AGENTS.md, git hooks, IDE rules, and MCP config into your project.</p>
+          <code>npx soloknuckle init</code>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Check</h3>
+          <p>Runs 10 hygiene dimensions. Shows human-friendly report with scores, issues, and fix suggestions.</p>
+          <code>npx soloknuckle check</code>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Fix</h3>
+          <p>Auto-fixes lint issues, missing tests, git init, CI workflows, .gitignore, feature flags, and docs.</p>
+          <code>npx soloknuckle check --fix</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMANDS -->
+  <section class="commands-section" id="commands">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Commands</div>
+        <h2>One CLI. Ten commands.<br>Complete coverage.</h2>
+      </div>
+      <table class="commands-table">
+        <thead>
+          <tr>
+            <th>Command</th>
+            <th>Description</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>npx soloknuckle init</code></td>
+            <td>Scaffold AGENTS.md, git hooks, IDE rules, MCP config</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle check</code></td>
+            <td>Pre-flight checks: lint, test, typecheck, secret scan</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle check --fix</code></td>
+            <td>Auto-fix issues (lint, deps, git, CI, docs)</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle score</code></td>
+            <td>Project health score (0–100) across 10 dimensions</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle audit</code></td>
+            <td>LLM reviews uncommitted code against AGENTS.md rules</td>
+            <td><span class="badge-llm">LLM</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle pr</code></td>
+            <td>Auto-generate PR description from git diff</td>
+            <td><span class="badge-llm">LLM</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle ui</code></td>
+            <td>Launch neo-brutalist web dashboard</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle telemetry</code></td>
+            <td>AI vs human contribution statistics</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle watch</code></td>
+            <td>Rollback daemon + Sentry webhook listener</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle persona</code></td>
+            <td>Generate directory-specific agent rules</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section class="security section" id="security">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Security</div>
+        <h2>Privacy-first by design.</h2>
+        <p>Your code never leaves your machine. Ever.</p>
+      </div>
+      <div class="security-grid">
+        <div class="security-item">
+          <h4>🏠 Local Only</h4>
+          <p>All data stays in <code>~/.soloknuckle/</code>. Nothing sent to external services. Zero telemetry.</p>
+        </div>
+        <div class="security-item">
+          <h4>🔐 No PII Collection</h4>
+          <p>No names, emails, or usage data collected. Your identity is nobody's business.</p>
+        </div>
+        <div class="security-item">
+          <h4>📦 npm Provenance</h4>
+          <p>Every publish is cryptographically tied to the source commit via OIDC. Verify the package came from this repo.</p>
+        </div>
+        <div class="security-item">
+          <h4>🚫 No Automated Publishing</h4>
+          <p>All releases are manual. No CI tokens that could be stolen. 2FA required with hardware security key.</p>
+        </div>
+        <div class="security-item">
+          <h4>🔍 Supply Chain Safe</h4>
+          <p><code>ignore-scripts=true</code> blocks malicious install scripts. <code>min-package-age=72h</code> prevents typosquatting.</p>
+        </div>
+        <div class="security-item">
+          <h4>🛡️ Rate Limiting</h4>
+          <p>CORS restricted to localhost. Body size limits prevent memory exhaustion. LLM endpoints protected.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- IDE INTEGRATION -->
+  <section class="section" id="ide">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">IDE Integration</div>
+        <h2>Works where you code.</h2>
+        <p>Auto-detected config for every major AI coding tool.</p>
+      </div>
+      <div class="ide-grid">
+        <div class="ide-card">
+          <h4>Cursor</h4>
+          <p>Auto-detected</p>
+          <code>.cursorrules</code>
+        </div>
+        <div class="ide-card">
+          <h4>Windsurf</h4>
+          <p>Auto-detected</p>
+          <code>.windsurfrules</code>
+        </div>
+        <div class="ide-card">
+          <h4>Claude Code</h4>
+          <p>Auto-detected</p>
+          <code>SKILL.md</code>
+        </div>
+        <div class="ide-card">
+          <h4>Replit</h4>
+          <p>Auto-detected</p>
+          <code>.replit</code>
+        </div>
+        <div class="ide-card">
+          <h4>Any IDE</h4>
+          <p>Copy this prompt:</p>
+          <code>Read AGENTS.md first. Run npx soloknuckle capabilities.</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE -->
+  <section class="quote-section">
+    <div class="container">
+      <p class="quote">Treat production like a hospital operating room.</p>
+      <p class="quote-attr">— from AGENTS.md</p>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="get-started">
+    <div class="container">
+      <h2>Ready to ship code<br>that doesn't break at 3am?</h2>
+      <p>Zero cost. Zero config. One command to production safety.</p>
+      <a href="https://github.com/z99wE/soloknuckle" class="btn btn-primary">View on GitHub</a>
+      <div class="hero-install">
+        <span class="prompt">$</span>npx soloknuckle init
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <ul class="footer-links">
+        <li><a href="https://github.com/z99wE/soloknuckle">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/soloknuckle">npm</a></li>
+        <li><a href="https://github.com/z99wE/soloknuckle/blob/main/README.md">Documentation</a></li>
+        <li><a href="https://github.com/z99wE/soloknuckle/blob/main/SECURITY.md">Security</a></li>
+        <li><a href="https://github.com/z99wE/soloknuckle/blob/main/LICENSE">License</a></li>
+      </ul>
+      <p class="footer-copy">Soloknuckle &middot; ISC License &middot; Built for the AI era</p>
+    </div>
+  </footer>
+
+</body>
+</html>
