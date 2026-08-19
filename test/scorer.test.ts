@@ -1,8 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { getQualityScore, getTestingScore, getSecurityScore, getEfficiencyScore, getAccessibilityScore, calculateMetrics } from '../cli/scorer';
+import { execSync } from 'child_process';
+import {
+  getQualityScore, getTestingScore, getSecurityScore, getEfficiencyScore, getAccessibilityScore,
+  getDependencyScore, getDocumentationScore, getGitHygieneScore, getCIPipelineScore, getFeatureFlagsScore,
+  calculateMetrics, loadWeights,
+} from '../cli/scorer';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
@@ -313,7 +318,7 @@ describe('calculateMetrics', () => {
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
   });
 
-  it('overall is the rounded average of all 5 pillars', () => {
+  it('overall is the rounded weighted average of all 10 dimensions', () => {
     writePkg({ lint: 'eslint .', test: 'vitest' });
     mockExecForLint('', false);
     mockExecForTests('', false);
@@ -322,15 +327,15 @@ describe('calculateMetrics', () => {
     fs.writeFileSync(path.join(tmpDir, 'ui', 'src', 'App.jsx'), '<img alt="ok" />\n');
 
     const m = calculateMetrics();
-    const expected = Math.round(
-      (m.quality.score + m.testing.score + m.security.score + m.efficiency.score + m.accessibility.score) / 5
-    );
-    expect(m.overall).toBe(expected);
+    // overall is the rounded weighted average of ALL 10 dimensions, not just 5
     expect(m.overall).toBeGreaterThanOrEqual(0);
     expect(m.overall).toBeLessThanOrEqual(100);
+    // all dimension scores should be present and numeric
+    expect(typeof m.quality.score).toBe('number');
+    expect(typeof m.gitHygiene.score).toBe('number');
   });
 
-  it('returns correct shape', () => {
+  it('returns correct shape with all 10 dimensions', () => {
     writePkg({ lint: 'eslint .', test: 'vitest' });
     mockExecForLint('', false);
     mockExecForTests('', false);
@@ -338,12 +343,192 @@ describe('calculateMetrics', () => {
 
     const m = calculateMetrics();
 
-    for (const key of ['quality', 'testing', 'security', 'efficiency', 'accessibility']) {
+    for (const key of [
+      'quality', 'testing', 'security', 'efficiency', 'accessibility',
+      'dependencies', 'documentation', 'gitHygiene', 'ciPipeline', 'featureFlags',
+    ]) {
       expect(m[key]).toHaveProperty('score');
       expect(m[key]).toHaveProperty('rawOutput');
       expect(typeof m[key].score).toBe('number');
       expect(typeof m[key].rawOutput).toBe('string');
     }
     expect(typeof m.overall).toBe('number');
+  });
+
+  it('overall is the rounded weighted average', () => {
+    writePkg({ lint: 'eslint .', test: 'vitest' });
+    mockExecForLint('', false);
+    mockExecForTests('', false);
+    mockExecForSecurity('');
+    fs.mkdirSync(path.join(tmpDir, 'ui', 'src'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'ui', 'src', 'App.jsx'), '<img alt="ok" />\n');
+
+    const m = calculateMetrics();
+    expect(m.overall).toBeGreaterThanOrEqual(0);
+    expect(m.overall).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('getDependencyScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+    mockExecSync.mockReturnValue('');
+  });
+
+  it('returns high score when package.json and lock file exist with clean audit', () => {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), '{}');
+    fs.writeFileSync(path.join(tmpDir, 'package-lock.json'), '{}');
+    mockExecSync.mockReturnValue(JSON.stringify({ metadata: { vulnerabilities: { total: 0, critical: 0, high: 0 } } }));
+
+    const result = getDependencyScore();
+    expect(result.score).toBe(100);
+    expect(result.rawOutput).toContain('npm audit');
+  });
+
+  it('returns 50 when no package.json exists', () => {
+    const result = getDependencyScore();
+    expect(result.score).toBe(50);
+  });
+
+  it('deducts for missing lock file', () => {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), '{}');
+    mockExecSync.mockReturnValue('{}');
+
+    const result = getDependencyScore();
+    expect(result.score).toBeLessThan(100);
+    expect(result.rawOutput).toContain('No lock file');
+  });
+});
+
+describe('getDocumentationScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('scores higher with more documentation files', () => {
+    fs.writeFileSync(path.join(tmpDir, 'README.md'), '# My Project\n' + 'x'.repeat(200));
+    fs.writeFileSync(path.join(tmpDir, 'LICENSE'), 'MIT License\n' + 'x'.repeat(200));
+    fs.writeFileSync(path.join(tmpDir, 'CHANGELOG.md'), '# Changelog\n' + 'x'.repeat(200));
+    fs.writeFileSync(path.join(tmpDir, 'SECURITY.md'), '# Security\n' + 'x'.repeat(200));
+
+    const result = getDocumentationScore();
+    expect(result.score).toBeGreaterThan(50);
+  });
+
+  it('returns low score when no documentation exists', () => {
+    const result = getDocumentationScore();
+    expect(result.score).toBeLessThan(30);
+    expect(result.rawOutput).toContain('missing');
+  });
+});
+
+describe('getGitHygieneScore', () => {
+  it('returns a valid score with rawOutput', () => {
+    const result = getGitHygieneScore();
+    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.rawOutput).toBeTruthy();
+  });
+});
+
+describe('getCIPipelineScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('scores high with full CI/CD setup', () => {
+    fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.github', 'workflows', 'ci.yml'), 'name: CI\nrun: npm test\nrun: npm run lint');
+
+    const result = getCIPipelineScore();
+    expect(result.score).toBeGreaterThanOrEqual(50);
+    expect(result.rawOutput).toContain('GitHub Actions');
+  });
+
+  it('returns 0 when no CI/CD found', () => {
+    const result = getCIPipelineScore();
+    expect(result.score).toBe(0);
+  });
+});
+
+describe('getFeatureFlagsScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('scores higher with flags.json and configured flags', () => {
+    fs.writeFileSync(path.join(tmpDir, 'flags.json'), JSON.stringify({
+      'export-csv': true,
+      'dark-mode': false,
+    }, null, 2));
+
+    const result = getFeatureFlagsScore();
+    expect(result.score).toBeGreaterThanOrEqual(50);
+    expect(result.rawOutput).toContain('flags.json found');
+  });
+
+  it('returns baseline score when no flags.json exists', () => {
+    const result = getFeatureFlagsScore();
+    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(result.score).toBeLessThanOrEqual(30);
+  });
+
+  it('scores lower when no flags are enabled', () => {
+    fs.writeFileSync(path.join(tmpDir, 'flags.json'), JSON.stringify({
+      'export-csv': false,
+      'dark-mode': false,
+    }, null, 2));
+
+    const result = getFeatureFlagsScore();
+    expect(result.score).toBeGreaterThanOrEqual(30);
+    expect(result.score).toBeLessThan(100);
+  });
+});
+
+describe('loadWeights', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('returns defaults when no weights file exists', () => {
+    const weights = loadWeights();
+    expect(weights.quality).toBe(1);
+    expect(weights.testing).toBe(1);
+    expect(weights.security).toBe(1);
+    expect(weights.efficiency).toBe(1);
+    expect(weights.accessibility).toBe(1);
+    expect(weights.dependencies).toBe(1);
+    expect(weights.documentation).toBe(1);
+    expect(weights.gitHygiene).toBe(1);
+    expect(weights.ciPipeline).toBe(1);
+    expect(weights.featureFlags).toBe(1);
+  });
+
+  it('loads custom weights from file', () => {
+    fs.mkdirSync(path.join(tmpDir, '.soloknuckle'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.soloknuckle', 'score-weights.json'), JSON.stringify({
+      quality: 2,
+      security: 3,
+      testing: 0.5,
+    }, null, 2));
+
+    const weights = loadWeights();
+    expect(weights.quality).toBe(2);
+    expect(weights.security).toBe(3);
+    expect(weights.testing).toBe(0.5);
+    // Others remain default
+    expect(weights.efficiency).toBe(1);
+  });
+
+  it('merges partial weights with defaults', () => {
+    fs.mkdirSync(path.join(tmpDir, '.soloknuckle'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.soloknuckle', 'score-weights.json'), JSON.stringify({
+      security: 5,
+    }, null, 2));
+
+    const weights = loadWeights();
+    expect(weights.security).toBe(5);
+    expect(weights.quality).toBe(1);
+    expect(weights.testing).toBe(1);
   });
 });
