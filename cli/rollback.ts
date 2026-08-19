@@ -83,12 +83,12 @@ export function parseSentryPayload(body: Record<string, unknown>): SentryInciden
     const event = body.event as Record<string, unknown>;
     const data = event.data as Record<string, unknown> | undefined;
     return {
-      id: String(body.event?.id || Date.now()),
-      title: String(data?.title || body.event?.title || 'Metric Alert Triggered'),
+      id: String(event.id || Date.now()),
+      title: String(data?.title || event.title || 'Metric Alert Triggered'),
       culprit: data?.culprit ? String(data.culprit) : undefined,
       level: 'error',
       project: data?.project_slug ? String(data.project_slug) : undefined,
-      url: body.data?.web_url ? String(body.data.web_url) : undefined,
+      url: undefined,
       timestamp: new Date().toISOString(),
     };
   }
