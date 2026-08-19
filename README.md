@@ -401,6 +401,68 @@ Agent: "Found a secret. Fixing it before proceeding."
 
 ---
 
+## Security
+
+Soloknuckle is built with security-first principles:
+
+### Package Integrity
+
+| Protection | How It Works |
+|------------|--------------|
+| **npm Provenance** | Every publish is cryptographically tied to the source commit via OIDC — you can verify the package came from this repo |
+| **2FA Required** | Publishing requires two-factor authentication with a hardware security key |
+| **Audit Signatures** | `npm audit signatures` verifies registry signatures on every install |
+| **No Automated Publishing** | All releases are manual — no CI tokens that could be stolen |
+
+### Install-Time Safety
+
+| Protection | How It Works |
+|------------|--------------|
+| **`ignore-scripts=true`** | Prevents supply chain attacks via malicious install scripts |
+| **`allow-git=none`** | Blocks git operations during install |
+| **`min-package-age=72`** | Requires packages to be 72+ hours old before install (prevents typosquatting) |
+| **Strict SSL** | All connections use HTTPS with strict certificate validation |
+
+### Runtime Safety
+
+| Protection | How It Works |
+|------------|--------------|
+| **Local-only** | All data stays in `~/.soloknuckle/` — nothing sent to external services |
+| **No telemetry** | Soloknuckle does not phone home |
+| **No PII collection** | No names, emails, or usage data collected |
+| **Rate limiting** | Prevents abuse of LLM API endpoints |
+| **CORS restrictions** | Express API restricted to localhost origins only |
+| **Body size limits** | 1mb limit prevents memory exhaustion attacks |
+
+### CI Security
+
+GitHub Actions workflow runs on every PR:
+- Security audit (`npm audit`)
+- Type checking (`tsc --noEmit`)
+- Linting (`eslint`)
+- Tests across Node.js 18, 20, 22
+
+Actions are pinned to specific commit SHAs to prevent upstream compromise.
+
+### Responsible Disclosure
+
+If you discover a security vulnerability, please report it privately. See [SECURITY.md](SECURITY.md) for details.
+
+### Supply Chain Attack Prevention
+
+```bash
+# Verify package integrity after install
+npm audit signatures
+
+# Check for known vulnerabilities
+npm audit
+
+# Install with provenance verification
+npm install soloknuckle --provenance
+```
+
+---
+
 ## What It Does NOT Do
 
 - **Not a hosting provider** — manages rollbacks conceptually via Vercel/Railway, doesn't host code

@@ -26,6 +26,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org"
+  },
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/z99wE/soloknuckle/issues"
