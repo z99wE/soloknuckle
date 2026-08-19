@@ -20,9 +20,6 @@ import { getOrPromptApiKey } from './config';
 import { callLLM } from './llm-client';
 import { calculateMetrics, generateSuggestions } from './scorer';
 import { runCheck } from './check';
-import { runInit } from './init';
-import { runReport } from './report';
-import { runCi } from './ci';
 
 const program = new Command();
 
@@ -348,33 +345,6 @@ program
     console.log(chalk.yellow('\n🤖 Generating AI Suggestions...'));
     const suggestions = await generateSuggestions(metrics);
     suggestions.forEach(s => console.log(chalk.green(`💡 ${s}`)));
-  });
-
-program
-  .command('init')
-  .description('Initialize Soloknuckle for a new project')
-  .option('-y, --yes', 'Skip prompts and use defaults')
-  .action(async (options) => {
-    await runInit(options);
-  });
-
-program
-  .command('report')
-  .description('Generate a shareable report of your project health')
-  .option('-f, --format <format>', 'Output format (html, json, markdown)', 'html')
-  .option('-o, --output <path>', 'Output file path')
-  .option('--open', 'Open report in default viewer')
-  .action(async (options) => {
-    await runReport(options);
-  });
-
-program
-  .command('ci')
-  .description('Generate CI/CD configuration for your project')
-  .option('-p, --platform <platform>', 'CI platform (github, gitlab, circleci, auto)', 'auto')
-  .option('-y, --yes', 'Skip prompts and use defaults')
-  .action(async (options) => {
-    await runCi(options);
   });
 
 program.parse(process.argv);
