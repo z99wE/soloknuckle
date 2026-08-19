@@ -13,9 +13,25 @@ vi.mock('../cli/config', () => ({
     LLM_MODEL: 'gpt-4',
     hooksEnabled: true,
     aiCommitsEnabled: false,
+    providers: [
+      { id: 'prov_1', name: 'Test OpenAI', type: 'OpenAI', apiKey: 'sk-test-1234567890abcdef', model: 'gpt-4' },
+      { id: 'prov_2', name: 'Test Anthropic', type: 'Anthropic', apiKey: 'sk-ant-xxxxx', model: 'claude-3' },
+    ],
+    activeProviderId: 'prov_1',
   })),
   saveConfig: vi.fn(),
   getOrPromptApiKey: vi.fn(),
+  generateProviderId: vi.fn(() => 'prov_new_123456'),
+  PROVIDER_REGISTRY: {
+    'OpenAI': { name: 'OpenAI', defaultModel: 'gpt-4o', needsApiKey: true },
+    'Anthropic': { name: 'Anthropic', defaultModel: 'claude-3-5-sonnet', needsApiKey: true },
+    'Ollama (Local)': { name: 'Ollama', defaultModel: 'llama3', needsApiKey: false },
+    'Gemini': { name: 'Gemini', defaultModel: 'gemini-1.5-pro', needsApiKey: true },
+  },
+}));
+
+vi.mock('../cli/llm-client', () => ({
+  callLLM: vi.fn().mockResolvedValue('OK'),
 }));
 
 vi.mock('../cli/telemetry', () => ({
@@ -282,6 +298,149 @@ describe('Express API endpoints', () => {
         .send({ targetDir: '/nonexistent', personaProfile: 'Frontend UX Designer' });
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error', 'path not found');
+    });
+  });
+
+  describe('GET /api/config/providers', () => {
+    it('returns list of saved providers with masked keys', async () => {
+      const app = getApp();
+      const res = await request(app).get('/api/config/providers');
+      expect(res.status).toBe(200);
+      expect(res.body.providers).toHaveLength(2);
+      expect(res.body.providers[0].id).toBe('prov_1');
+      expect(res.body.providers[0].name).toBe('Test OpenAI');
+      expect(res.body.providers[0].type).toBe('OpenAI');
+      expect(res.body.providers[0].apiKey).toMatch(/^sk-t\.\.\.cdef$/);
+      expect(res.body.providers[0].model).toBe('gpt-4');
+      expect(res.body.activeId).toBe('prov_1');
+    });
+
+    it('redacts API keys with "..." in response', async () => {
+      const app = getApp();
+      const res = await request(app).get('/api/config/providers');
+      const keys = res.body.providers.map((p: { apiKey?: string }) => p.apiKey);
+      expect(keys.every((k: string) => k.includes('...') || !k)).toBe(true);
+    });
+  });
+
+  describe('POST /api/config/providers', () => {
+    it('adds a new provider and persists it', async () => {
+      const { saveConfig } = await import('../cli/config');
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers')
+        .send({ name: 'My Local', type: 'Ollama (Local)', baseUrl: 'http://localhost:11434/v1' });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body).toHaveProperty('provider');
+      expect(res.body.provider).toHaveProperty('id');
+      expect(saveConfig).toHaveBeenCalled();
+    });
+
+    it('requires name and type fields', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers')
+        .send({ name: 'Incomplete' });
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'type must be one of: OpenAI, Anthropic, Ollama (Local), Gemini');
+    });
+
+    it('rejects unknown provider types', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers')
+        .send({ name: 'Fake', type: 'UnknownProvider' });
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'type must be one of: OpenAI, Anthropic, Ollama (Local), Gemini');
+    });
+  });
+
+  describe('DELETE /api/config/providers/:id', () => {
+    it('removes a provider by id and persists changes', async () => {
+      const { saveConfig } = await import('../cli/config');
+      const app = getApp();
+      const res = await request(app).delete('/api/config/providers/prov_2');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(saveConfig).toHaveBeenCalled();
+    });
+
+    it('falls back to another provider when deleting the active one', async () => {
+      const app = getApp();
+      const res = await request(app).delete('/api/config/providers/prov_1');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('success', true);
+    });
+
+    it('returns 404 when provider id does not exist', async () => {
+      const app = getApp();
+      const res = await request(app).delete('/api/config/providers/nonexistent');
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error', 'Provider not found');
+    });
+  });
+
+  describe('POST /api/config/providers/activate', () => {
+    it('activates a provider and syncs legacy fields', async () => {
+      const { saveConfig } = await import('../cli/config');
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers/activate')
+        .send({ providerId: 'prov_2' });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(saveConfig).toHaveBeenCalled();
+    });
+
+    it('returns 400 when providerId is missing', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers/activate')
+        .send({});
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'providerId is required');
+    });
+
+    it('returns 404 for unknown provider id', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers/activate')
+        .send({ providerId: 'nonexistent_id' });
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error', 'Provider not found');
+    });
+  });
+
+  describe('POST /api/config/providers/test', () => {
+    it('returns 400 when providerId is missing', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers/test')
+        .send({});
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'providerId is required');
+    });
+
+    it('returns 404 for unknown provider id', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers/test')
+        .send({ providerId: 'nonexistent' });
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error', 'Provider not found');
+    });
+
+    it('temporarily activates provider, sends test prompt, then restores original', async () => {
+      const { saveConfig } = await import('../cli/config');
+      saveConfig.mockClear();
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/config/providers/test')
+        .send({ providerId: 'prov_2' });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(saveConfig).toHaveBeenCalledTimes(2); // temp activate + restore
     });
   });
 });

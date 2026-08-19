@@ -1,74 +1,101 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const TEST_DIR = path.join(os.tmpdir(), 'soloknuckle-test-telemetry');
-
 describe('telemetry', () => {
   let originalCwd: string;
+  let tmpDir: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     originalCwd = process.cwd();
-    fs.mkdirSync(TEST_DIR, { recursive: true });
-    process.chdir(TEST_DIR);
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'soloknuckle-telemetry-'));
+    process.chdir(tmpDir);
+    vi.resetModules();
   });
 
   afterEach(() => {
     process.chdir(originalCwd);
-    const telemetryDir = path.join(TEST_DIR, '.soloknuckle');
-    if (fs.existsSync(telemetryDir)) {
-      fs.rmSync(telemetryDir, { recursive: true, force: true });
-    }
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('initTelemetry should create .soloknuckle directory and telemetry.json', async () => {
-    const { initTelemetry } = await import('../cli/telemetry');
+  async function importTelemetry() {
+    const mod = await import('../cli/telemetry');
+    return mod;
+  }
+
+  it('should initialize telemetry file with zeros', async () => {
+    const { initTelemetry } = await importTelemetry();
     initTelemetry();
-    const dir = path.join(TEST_DIR, '.soloknuckle');
-    const file = path.join(dir, 'telemetry.json');
-    expect(fs.existsSync(dir)).toBe(true);
+    const file = path.join(tmpDir, '.soloknuckle', 'telemetry.json');
     expect(fs.existsSync(file)).toBe(true);
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    expect(data).toEqual({
+      humanCommits: 0,
+      aiCommits: 0,
+      linesByHuman: 0,
+      linesByAi: 0,
+    });
   });
 
-  it('initTelemetry should create default telemetry data', async () => {
-    const { initTelemetry, getTelemetry } = await import('../cli/telemetry');
+  it('should not overwrite existing telemetry file on re-init', async () => {
+    const { initTelemetry, logTelemetry } = await importTelemetry();
     initTelemetry();
-    const data = getTelemetry();
+    logTelemetry(true, 10);
+    initTelemetry();
+    const data = JSON.parse(fs.readFileSync(path.join(tmpDir, '.soloknuckle', 'telemetry.json'), 'utf-8'));
+    expect(data.aiCommits).toBe(1);
+    expect(data.linesByAi).toBe(10);
+  });
+
+  it('should log AI commits', async () => {
+    const { logTelemetry } = await importTelemetry();
+    const data = logTelemetry(true, 42);
+    expect(data.aiCommits).toBe(1);
+    expect(data.linesByAi).toBe(42);
     expect(data.humanCommits).toBe(0);
-    expect(data.aiCommits).toBe(0);
     expect(data.linesByHuman).toBe(0);
+  });
+
+  it('should log human commits', async () => {
+    const { logTelemetry } = await importTelemetry();
+    const data = logTelemetry(false, 15);
+    expect(data.humanCommits).toBe(1);
+    expect(data.linesByHuman).toBe(15);
+    expect(data.aiCommits).toBe(0);
     expect(data.linesByAi).toBe(0);
   });
 
-  it('logTelemetry should increment AI commits', async () => {
-    const { initTelemetry, logTelemetry, getTelemetry } = await import('../cli/telemetry');
-    initTelemetry();
-    logTelemetry(true, 42);
-    const data = getTelemetry();
-    expect(data.aiCommits).toBe(1);
-    expect(data.linesByAi).toBe(42);
-  });
-
-  it('logTelemetry should increment human commits', async () => {
-    const { initTelemetry, logTelemetry, getTelemetry } = await import('../cli/telemetry');
-    initTelemetry();
-    logTelemetry(false, 15);
-    const data = getTelemetry();
-    expect(data.humanCommits).toBe(1);
-    expect(data.linesByHuman).toBe(15);
-  });
-
-  it('logTelemetry should accumulate across calls', async () => {
-    const { initTelemetry, logTelemetry, getTelemetry } = await import('../cli/telemetry');
-    initTelemetry();
+  it('should accumulate telemetry across multiple calls', async () => {
+    const { logTelemetry } = await importTelemetry();
     logTelemetry(true, 10);
     logTelemetry(true, 20);
     logTelemetry(false, 5);
-    const data = getTelemetry();
+    const data = logTelemetry(false, 3);
     expect(data.aiCommits).toBe(2);
     expect(data.linesByAi).toBe(30);
+    expect(data.humanCommits).toBe(2);
+    expect(data.linesByHuman).toBe(8);
+  });
+
+  it('should recover from malformed telemetry JSON', async () => {
+    const { logTelemetry } = await importTelemetry();
+    const dir = path.join(tmpDir, '.soloknuckle');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'telemetry.json'), 'NOT JSON');
+    const data = logTelemetry(true, 5);
+    expect(data.aiCommits).toBe(1);
+    expect(data.linesByAi).toBe(5);
+  });
+
+  it('should return telemetry data via getTelemetry', async () => {
+    const { logTelemetry, getTelemetry } = await importTelemetry();
+    logTelemetry(true, 100);
+    logTelemetry(false, 50);
+    const data = getTelemetry();
+    expect(data.aiCommits).toBe(1);
+    expect(data.linesByAi).toBe(100);
     expect(data.humanCommits).toBe(1);
-    expect(data.linesByHuman).toBe(5);
+    expect(data.linesByHuman).toBe(50);
   });
 });

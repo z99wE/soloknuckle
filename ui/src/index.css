@@ -153,7 +153,8 @@ h1, h2, h3, h4 {
   transform: translate(-2px, -2px);
 }
 
-.toggle-track:focus-visible {
+.toggle-track:focus-visible,
+.btn:focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 2px;
 }
@@ -177,6 +178,43 @@ input, select {
   height: 20px;
   background: var(--border-color);
   margin-left: 20px;
+}
+
+/* Provider card transitions */
+.provider-card {
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.provider-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #000;
+}
+
+/* FAQ accordion open/close toggle */
+details > summary::marker {
+  content: '';
+}
+
+details[open] > summary span:last-child {
+  content: '−';
+}
+
+details > summary {
+  user-select: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Active provider highlight pulse */
+.provider-active-indicator {
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 3px 3px 0 #000; }
+  50% { box-shadow: 3px 3px 0 var(--primary); }
 }
 
 .sr-only {

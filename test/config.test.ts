@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { loadConfig, saveConfig, getOrPromptApiKey, SoloknuckleConfig } from '../cli/config';
+import {
+  loadConfig, saveConfig, getOrPromptApiKey, SoloknuckleConfig,
+  LLMProviderType, LLMProvider, PROVIDER_REGISTRY, getActiveProvider, generateProviderId
+} from '../cli/config';
 
 vi.mock('inquirer', () => ({
   default: {
@@ -103,6 +106,133 @@ describe('config', () => {
     it('should accept empty config', () => {
       const config: SoloknuckleConfig = {};
       expect(config.LLM_PROVIDER).toBeUndefined();
+    });
+
+    it('should accept config with providers array', () => {
+      const config: SoloknuckleConfig = {
+        providers: [
+          { id: 'prov_1', name: 'My OpenAI', type: 'OpenAI', apiKey: 'sk-test', model: 'gpt-4' },
+          { id: 'prov_2', name: 'My Ollama', type: 'Ollama (Local)', baseUrl: 'http://localhost:11434/v1' },
+        ],
+        activeProviderId: 'prov_1',
+      };
+      expect(config.providers).toHaveLength(2);
+      expect(config.activeProviderId).toBe('prov_1');
+    });
+  });
+
+  describe('LLMProviderType', () => {
+    it('should contain all 11 provider types via PROVIDER_REGISTRY keys', () => {
+      const types = Object.keys(PROVIDER_REGISTRY);
+      expect(types).toContain('OpenAI');
+      expect(types).toContain('Anthropic');
+      expect(types).toContain('Gemini');
+      expect(types).toContain('Ollama (Local)');
+      expect(types).toContain('Groq');
+      expect(types).toContain('OpenRouter');
+      expect(types).toContain('DeepSeek');
+      expect(types).toContain('Mistral');
+      expect(types).toContain('xAI (Grok)');
+      expect(types).toContain('Cohere');
+      expect(types).toContain('OpenAI Compatible');
+      expect(types.length).toBe(11);
+    });
+  });
+
+  describe('LLMProvider interface', () => {
+    it('should accept a minimal provider', () => {
+      const provider: LLMProvider = {
+        id: 'prov_1',
+        name: 'Test Provider',
+        type: 'OpenAI',
+      };
+      expect(provider.id).toBe('prov_1');
+      expect(provider.name).toBe('Test Provider');
+      expect(provider.type).toBe('OpenAI');
+      expect(provider.apiKey).toBeUndefined();
+      expect(provider.baseUrl).toBeUndefined();
+      expect(provider.model).toBeUndefined();
+    });
+
+    it('should accept a provider with all optional fields', () => {
+      const provider: LLMProvider = {
+        id: 'prov_2',
+        name: 'Full Provider',
+        type: 'Anthropic',
+        apiKey: 'sk-ant-xxx',
+        baseUrl: 'https://api.anthropic.com',
+        model: 'claude-3',
+      };
+      expect(provider.apiKey).toBe('sk-ant-xxx');
+      expect(provider.baseUrl).toBe('https://api.anthropic.com');
+      expect(provider.model).toBe('claude-3');
+    });
+  });
+
+  describe('PROVIDER_REGISTRY', () => {
+    it('should have entries for all provider types', () => {
+      const types = Object.keys(PROVIDER_REGISTRY);
+      for (const t of types) {
+        expect(PROVIDER_REGISTRY[t as keyof typeof PROVIDER_REGISTRY]).toBeDefined();
+        expect(PROVIDER_REGISTRY[t as keyof typeof PROVIDER_REGISTRY].defaultModel).toBeTruthy();
+      }
+    });
+
+    it('should flag local providers as not needing API keys', () => {
+      expect(PROVIDER_REGISTRY['Ollama (Local)'].needsApiKey).toBe(false);
+    });
+
+    it('should flag cloud providers as needing API keys', () => {
+      expect(PROVIDER_REGISTRY['OpenAI'].needsApiKey).toBe(true);
+      expect(PROVIDER_REGISTRY['Anthropic'].needsApiKey).toBe(true);
+      expect(PROVIDER_REGISTRY['Gemini'].needsApiKey).toBe(true);
+    });
+  });
+
+  describe('getActiveProvider', () => {
+    it('should return the active provider when providers array exists', () => {
+      const config: SoloknuckleConfig = {
+        providers: [
+          { id: 'prov_1', name: 'A', type: 'OpenAI' },
+          { id: 'prov_2', name: 'B', type: 'Anthropic' },
+        ],
+        activeProviderId: 'prov_2',
+      };
+      const active = getActiveProvider(config);
+      expect(active?.id).toBe('prov_2');
+      expect(active?.name).toBe('B');
+    });
+
+    it('should return null when no providers', () => {
+      const config: SoloknuckleConfig = {};
+      expect(getActiveProvider(config)).toBeNull();
+    });
+
+    it('should return null when activeProviderId points to missing provider', () => {
+      const config: SoloknuckleConfig = {
+        providers: [{ id: 'prov_1', name: 'A', type: 'OpenAI' }],
+        activeProviderId: 'nonexistent',
+      };
+      expect(getActiveProvider(config)).toBeNull();
+    });
+
+    it('should return null when activeProviderId is missing', () => {
+      const config: SoloknuckleConfig = {
+        providers: [{ id: 'prov_1', name: 'A', type: 'OpenAI' }],
+      };
+      expect(getActiveProvider(config)).toBeNull();
+    });
+  });
+
+  describe('generateProviderId', () => {
+    it('should return a string starting with "prov_"', () => {
+      const id = generateProviderId();
+      expect(id).toMatch(/^prov_/);
+    });
+
+    it('should generate unique IDs', () => {
+      const ids = new Set(Array.from({ length: 50 }, () => generateProviderId()));
+      expect(ids.size).toBe(50);
     });
   });
 });
