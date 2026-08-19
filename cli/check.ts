@@ -1,0 +1,262 @@
+import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import { scanDiffForSecretsAndPII } from './scanner';
+import {
+  printHeader,
+  printScoreSummary,
+  printCheckSection,
+  printSummary,
+  buildIssuesFromScores,
+  Issue,
+  CheckResult,
+} from './reporter';
+import {
+  getSecurityScore,
+  getTestingScore,
+  getAccessibilityScore,
+  getDependencyScore,
+  getDocumentationScore,
+  getGitHygieneScore,
+  getCIPipelineScore,
+  getFeatureFlagsScore,
+  getQualityScore,
+  getEfficiencyScore,
+} from './scorer';
+
+interface CheckOptions {
+  fix?: boolean;
+  verbose?: boolean;
+}
+
+export async function runCheck(options: CheckOptions = {}): Promise<void> {
+  printHeader();
+
+  const allIssues: Issue[] = [];
+  const scores: Record<string, number> = {};
+
+  // 1. Security check
+  const security = getSecurityScore();
+  scores.secrets = security.score;
+  const securityIssues: Issue[] = [];
+  if (security.score < 50) {
+    securityIssues.push({
+      severity: 'critical',
+      category: 'Security',
+      message: 'Potential secrets or API keys detected',
+      fix: 'Move secrets to .env and add .env to .gitignore',
+    });
+  } else if (security.score < 80) {
+    securityIssues.push({
+      severity: 'warning',
+      category: 'Security',
+      message: 'Some security patterns could be improved',
+    });
+  }
+  printCheckSection('Security', '\u{1F512}', { score: security.score, label: 'Security', issues: securityIssues });
+  allIssues.push(...securityIssues);
+
+  // 2. Testing check
+  const testing = getTestingScore();
+  scores.testing = testing.score;
+  const testingIssues: Issue[] = [];
+  if (testing.score < 50) {
+    testingIssues.push({
+      severity: 'warning',
+      category: 'Testing',
+      message: 'No tests found or tests are failing',
+      fix: 'Add a "test" script to package.json and write tests',
+    });
+  }
+  printCheckSection('Testing', '\u{1F9EA}', { score: testing.score, label: 'Testing', issues: testingIssues });
+  allIssues.push(...testingIssues);
+
+  // 3. Quality check
+  const quality = getQualityScore();
+  scores.quality = quality.score;
+  const qualityIssues: Issue[] = [];
+  if (quality.score < 70) {
+    qualityIssues.push({
+      severity: 'warning',
+      category: 'Quality',
+      message: 'Code quality could be improved',
+      fix: 'Run ESLint and fix reported issues',
+    });
+  }
+  printCheckSection('Code Quality', '\u{2728}', { score: quality.score, label: 'Quality', issues: qualityIssues });
+  allIssues.push(...qualityIssues);
+
+  // 4. Dependencies check
+  const deps = getDependencyScore();
+  scores.dependencies = deps.score;
+  const depsIssues: Issue[] = [];
+  if (deps.score < 70) {
+    depsIssues.push({
+      severity: 'warning',
+      category: 'Dependencies',
+      message: 'Vulnerable or outdated dependencies found',
+      fix: 'Run npm audit fix to address known vulnerabilities',
+    });
+  }
+  printCheckSection('Dependencies', '\u{1F4E6}', { score: deps.score, label: 'Dependencies', issues: depsIssues });
+  allIssues.push(...depsIssues);
+
+  // 5. Accessibility check
+  const a11y = getAccessibilityScore();
+  scores.a11y = a11y.score;
+  const a11yIssues: Issue[] = [];
+  if (a11y.score < 70) {
+    a11yIssues.push({
+      severity: 'warning',
+      category: 'Accessibility',
+      message: 'Your app may be hard to use for people with disabilities',
+      fix: 'Add alt text to images and aria-labels to interactive elements',
+    });
+  }
+  printCheckSection('Accessibility', '\u{1F441}\u{FE0F}', { score: a11y.score, label: 'Accessibility', issues: a11yIssues });
+  allIssues.push(...a11yIssues);
+
+  // 6. Documentation check
+  const docs = getDocumentationScore();
+  scores.docs = docs.score;
+  const docsIssues: Issue[] = [];
+  if (docs.score < 40) {
+    docsIssues.push({
+      severity: 'info',
+      category: 'Documentation',
+      message: 'Missing README or LICENSE',
+      fix: 'Add README.md and LICENSE files',
+    });
+  }
+  printCheckSection('Documentation', '\u{1F4DD}', { score: docs.score, label: 'Documentation', issues: docsIssues });
+  allIssues.push(...docsIssues);
+
+  // 7. Git hygiene check
+  const git = getGitHygieneScore();
+  scores.git = git.score;
+  const gitIssues: Issue[] = [];
+  if (git.score < 60) {
+    gitIssues.push({
+      severity: 'warning',
+      category: 'Git Hygiene',
+      message: 'Commit messages could follow better conventions',
+      fix: 'Use conventional commits: feat:, fix:, docs:, etc.',
+    });
+  }
+  printCheckSection('Git Hygiene', '\u{1F4C1}', { score: git.score, label: 'Git Hygiene', issues: gitIssues });
+  allIssues.push(...gitIssues);
+
+  // 8. CI/CD check
+  const ci = getCIPipelineScore();
+  scores.ci = ci.score;
+  const ciIssues: Issue[] = [];
+  if (ci.score < 50) {
+    ciIssues.push({
+      severity: 'info',
+      category: 'CI/CD',
+      message: 'No CI/CD pipeline detected',
+      fix: 'Add GitHub Actions to catch issues before they reach production',
+    });
+  }
+  printCheckSection('CI/CD Pipeline', '\u{2699}\u{FE0F}', { score: ci.score, label: 'CI/CD', issues: ciIssues });
+  allIssues.push(...ciIssues);
+
+  // 9. Feature flags check
+  const flags = getFeatureFlagsScore();
+  scores.featureFlags = flags.score;
+  const flagIssues: Issue[] = [];
+  if (flags.score < 50) {
+    flagIssues.push({
+      severity: 'info',
+      category: 'Feature Flags',
+      message: 'No feature flag system detected',
+      fix: 'Add flags.json to safely roll out changes gradually',
+    });
+  }
+  printCheckSection('Feature Flags', '\u{1F6A9}', { score: flags.score, label: 'Feature Flags', issues: flagIssues });
+  allIssues.push(...flagIssues);
+
+  // 10. Secrets scan (from staged changes)
+  try {
+    execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
+    const diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
+    if (diff) {
+      const violations = scanDiffForSecretsAndPII(diff);
+      if (violations.length > 0) {
+        violations.forEach((v) => {
+          allIssues.push({
+            severity: 'critical',
+            category: 'Secrets',
+            message: v,
+            fix: 'Remove secrets from code and use environment variables',
+          });
+        });
+      }
+    }
+  } catch {
+    // Not a git repo or no staged changes - skip
+  }
+
+  // Calculate overall score
+  const weights = { security: 2, testing: 1.5, quality: 1.5, deps: 1, a11y: 1, docs: 0.5, git: 1, ci: 1, flags: 0.5 };
+  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+  const totalScore = Math.round(
+    (scores.secrets * weights.security +
+      scores.testing * weights.testing +
+      scores.quality * weights.quality +
+      scores.dependencies * weights.deps +
+      scores.a11y * weights.a11y +
+      scores.docs * weights.docs +
+      scores.git * weights.git +
+      scores.ci * weights.ci +
+      scores.featureFlags * weights.flags) /
+      totalWeight
+  );
+
+  printScoreSummary(totalScore);
+  printSummary(totalScore, allIssues);
+
+  if (options.fix && allIssues.length > 0) {
+    console.log(chalk.cyan('  \u{1F527} Attempting auto-fixes...\n'));
+    await attemptFixes(allIssues);
+  }
+
+  if (allIssues.some((i) => i.severity === 'critical')) {
+    process.exit(1);
+  }
+}
+
+async function attemptFixes(issues: Issue[]): Promise<void> {
+  let fixedCount = 0;
+
+  for (const issue of issues) {
+    if (issue.fix && issue.category === 'Dependencies') {
+      try {
+        console.log(chalk.dim('     Running npm audit fix...'));
+        execSync('npm audit fix', { stdio: 'ignore', cwd: process.cwd() });
+        console.log(chalk.green('     \u{2713} Fixed dependency issues'));
+        fixedCount++;
+      } catch {
+        console.log(chalk.yellow('     \u{26A0}\u{FE0F} Could not auto-fix dependencies'));
+      }
+    }
+
+    if (issue.category === 'Documentation') {
+      const readmePath = path.join(process.cwd(), 'README.md');
+      if (!fs.existsSync(readmePath)) {
+        const projectName = path.basename(process.cwd());
+        fs.writeFileSync(
+          readmePath,
+          `# ${projectName}\n\n> A project built with Soloknuckle production hygiene.\n\n## Getting Started\n\n\`\`\`bash\nnpm install\nnpm start\n\`\`\`\n\n## License\n\nISC\n`
+        );
+        console.log(chalk.green('     \u{2713} Created README.md'));
+        fixedCount++;
+      }
+    }
+  }
+
+  if (fixedCount === 0) {
+    console.log(chalk.dim('     No auto-fixes available for these issues.'));
+  }
+}

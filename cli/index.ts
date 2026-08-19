@@ -19,6 +19,7 @@ import { logTelemetry, getTelemetry } from './telemetry';
 import { getOrPromptApiKey } from './config';
 import { callLLM } from './llm-client';
 import { calculateMetrics, generateSuggestions } from './scorer';
+import { runCheck } from './check';
 
 const program = new Command();
 
@@ -189,83 +190,11 @@ ${agentInstructions}`;
 
 program
   .command('check')
-  .description('The "Main Hub Guard". Runs quality gates before allowing a push to the main hub')
-  .action(() => {
-    console.log(chalk.yellow('🛡️ Running pre-flight checks...'));
-    
-    try {
-      const pkgPath = path.join(process.cwd(), 'package.json');
-      let hasLint = false, hasTest = false;
-      if (fs.existsSync(pkgPath)) {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        if (pkg.scripts) {
-          hasLint = !!pkg.scripts.lint;
-          hasTest = !!pkg.scripts.test;
-        }
-      }
-
-      console.log(chalk.blue('Running linter (ESLint)...'));
-      if (hasLint) {
-        try {
-          execSync('npm run lint', { stdio: 'inherit', cwd: process.cwd(), timeout: 30000 });
-          console.log(chalk.green('✅ Lint passed.'));
-        } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : 'Unknown error';
-          throw new Error(`Lint failed: ${msg}`);
-        }
-      } else {
-        console.log(chalk.yellow('⚠️ No "lint" script found in package.json. Skipping.'));
-      }
-      
-      console.log(chalk.blue('Running type checker...'));
-      try {
-        execSync('npx tsc --noEmit', { stdio: 'inherit', cwd: process.cwd(), timeout: 30000 });
-        console.log(chalk.green('✅ Types are solid.'));
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Unknown error';
-        console.log(chalk.red(`⚠️ "tsc" not found or failed: ${msg}`));
-      }
-      
-      console.log(chalk.blue('Running tests...'));
-      if (hasTest) {
-        try {
-          execSync('npm run test', { stdio: 'inherit', cwd: process.cwd(), timeout: 60000 });
-          console.log(chalk.green('✅ Tests passed.'));
-        } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : 'Unknown error';
-          throw new Error(`Tests failed: ${msg}`);
-        }
-      } else {
-        console.log(chalk.yellow('⚠️ No "test" script found in package.json. Skipping.'));
-      }
-
-      console.log(chalk.blue('Scanning for Secrets and PII...'));
-      let diff = '';
-      let gitAvailable = false;
-      try {
-        // Check if we're in a git repository first
-        execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
-        diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
-        gitAvailable = true;
-      } catch (e: unknown) {
-        console.log(chalk.yellow('⚠️ Not a git repository or git not available. Skipping secret/PII scan.'));
-      }
-      
-      if (gitAvailable) {
-        const violations = scanDiffForSecretsAndPII(diff);
-        if (violations.length > 0) {
-          violations.forEach(v => console.log(chalk.red(v)));
-          throw new Error('Secret/PII scan failed');
-        } else {
-          console.log(chalk.green('✅ No secrets or PII detected.'));
-        }
-      }
-      
-      console.log(chalk.cyan('🎉 All quality gates passed! You are clear for takeoff.'));
-    } catch (err) {
-      console.error(chalk.red('❌ Pre-flight checks failed. Please fix the errors before pushing.'));
-      process.exit(1);
-    }
+  .description('Check if your code is production-ready (human-friendly output)')
+  .option('--fix', 'Attempt to auto-fix issues')
+  .option('--verbose', 'Show detailed output')
+  .action(async (options) => {
+    await runCheck(options);
   });
 
 program
