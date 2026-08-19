@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Production hygiene CLI — pre-flight checks, secret scanning, agent firewall, and a visual dashboard for any project.",
   "main": "./dist/cli/index.js",
+  "types": "./dist/cli/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "soloknuckle": "./dist/cli/index.js",
     "soloknuckle-mcp": "./dist/cli/mcp-server.js"
@@ -23,7 +27,19 @@
     "type": "git",
     "url": "git+https://github.com/z99wE/soloknuckle.git"
   },
-  "keywords": [],
+  "keywords": [
+    "production",
+    "hygiene",
+    "cli",
+    "ai",
+    "security",
+    "linting",
+    "quality",
+    "pre-flight",
+    "guardrails",
+    "code-quality",
+    "developer-tools"
+  ],
   "author": "",
   "license": "ISC",
   "publishConfig": {
