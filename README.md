@@ -124,7 +124,8 @@ npx soloknuckle ui
 | Command | Description | Output |
 |---------|-------------|--------|
 | `npx soloknuckle init` | Scaffolds AGENTS.md, git hooks, IDE rules, MCP config | Files created in project |
-| `npx soloknuckle check` | Pre-flight: lint, test, typecheck, secret scan | Pass/fail report |
+| `npx soloknuckle check` | Pre-flight: lint, test, typecheck, secret scan | Human-friendly score report |
+| `npx soloknuckle check --fix` | Auto-fix issues (lint, deps, git, CI, docs) | Fixes applied automatically |
 | `npx soloknuckle score` | Project health 0-100 across 5 pillars | Numeric score + breakdown |
 | `npx soloknuckle ui` | Launches web dashboard | http://localhost:3000 |
 | `npx soloknuckle telemetry` | AI vs human contribution stats | Stats report |

@@ -254,6 +254,79 @@ async function attemptFixes(issues: Issue[]): Promise<void> {
         fixedCount++;
       }
     }
+
+    if (issue.category === 'CI/CD') {
+      const ciDir = path.join(process.cwd(), '.github', 'workflows');
+      const ciPath = path.join(ciDir, 'ci.yml');
+      if (!fs.existsSync(ciPath)) {
+        fs.mkdirSync(ciDir, { recursive: true });
+        fs.writeFileSync(
+          ciPath,
+          `name: CI\n\non:\n  push:\n    branches: [main, develop]\n  pull_request:\n    branches: [main]\n\njobs:\n  quality:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n      - run: npm ci\n      - run: npm run lint\n      - run: npm test\n`
+        );
+        console.log(chalk.green('     \u{2713} Created .github/workflows/ci.yml'));
+        fixedCount++;
+      }
+    }
+
+    if (issue.category === 'Feature Flags') {
+      const flagsPath = path.join(process.cwd(), 'flags.json');
+      if (!fs.existsSync(flagsPath)) {
+        fs.writeFileSync(
+          flagsPath,
+          JSON.stringify(
+            {
+              $schema: 'https://raw.githubusercontent.com/z99wE/soloknuckle/main/flags-schema.json',
+              flags: {},
+              version: 1,
+            },
+            null,
+            2
+          ) + '\n'
+        );
+        console.log(chalk.green('     \u{2713} Created flags.json'));
+        fixedCount++;
+      }
+    }
+
+    if (issue.category === 'Quality' || issue.category === 'Code Quality') {
+      try {
+        const pkgPath = path.join(process.cwd(), 'package.json');
+        if (fs.existsSync(pkgPath)) {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+          if (pkg.scripts && pkg.scripts.lint) {
+            console.log(chalk.dim('     Running npm run lint -- --fix...'));
+            execSync('npm run lint -- --fix', { stdio: 'ignore', cwd: process.cwd() });
+            console.log(chalk.green('     \u{2713} Fixed lint issues'));
+            fixedCount++;
+          }
+        }
+      } catch {
+        console.log(chalk.yellow('     \u{26A0}\u{FE0F} Could not auto-fix lint issues'));
+      }
+    }
+
+    if (issue.category === 'Git Hygiene') {
+      const gitDir = path.join(process.cwd(), '.git');
+      if (!fs.existsSync(gitDir)) {
+        console.log(chalk.dim('     Initializing git repository...'));
+        execSync('git init', { stdio: 'ignore', cwd: process.cwd() });
+        console.log(chalk.green('     \u{2713} Initialized git repository'));
+        fixedCount++;
+      }
+    }
+
+    if (issue.category === 'Security' || issue.category === 'Secrets') {
+      const gitignorePath = path.join(process.cwd(), '.gitignore');
+      if (!fs.existsSync(gitignorePath)) {
+        fs.writeFileSync(
+          gitignorePath,
+          `# Dependencies\nnode_modules/\n\n# Environment\n.env\n.env.local\n.env.*.local\n\n# Build\ndist/\nbuild/\n\n# IDE\n.vscode/\n.idea/\n\n# OS\n.DS_Store\nThumbs.db\n\n# Soloknuckle\n.soloknuckle/\n`
+        );
+        console.log(chalk.green('     \u{2713} Created .gitignore with secrets excluded'));
+        fixedCount++;
+      }
+    }
   }
 
   if (fixedCount === 0) {
