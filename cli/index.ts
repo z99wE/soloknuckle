@@ -342,7 +342,7 @@ program
 
 program
   .command('score')
-  .description('Calculates the health of the project across 5 key pillars')
+  .description('Calculates the health of the project across 13 dimensions')
   .action(async () => {
     console.log(chalk.magenta('🔍 Calculating Vibe Score...'));
     const metrics = calculateMetrics();

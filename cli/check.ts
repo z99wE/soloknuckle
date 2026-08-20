@@ -38,7 +38,8 @@ interface CheckOptions {
 }
 
 export async function runCheck(options: CheckOptions = {}): Promise<void> {
-  printHeader();
+  const isJson = options.format === 'json';
+  if (!isJson) printHeader();
 
   const allIssues: Issue[] = [];
   const scores: Record<string, number> = {};
@@ -61,7 +62,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       message: 'Some security patterns could be improved',
     });
   }
-  printCheckSection('Security', '\u{1F512}', { score: security.score, label: 'Security', issues: securityIssues });
+  if (!isJson) printCheckSection('Security', '\u{1F512}', { score: security.score, label: 'Security', issues: securityIssues });
   allIssues.push(...securityIssues);
 
   // 2. Testing check
@@ -76,7 +77,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add a "test" script to package.json and write tests',
     });
   }
-  printCheckSection('Testing', '\u{1F9EA}', { score: testing.score, label: 'Testing', issues: testingIssues });
+  if (!isJson) printCheckSection('Testing', '\u{1F9EA}', { score: testing.score, label: 'Testing', issues: testingIssues });
   allIssues.push(...testingIssues);
 
   // 3. Quality check
@@ -91,7 +92,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Run ESLint and fix reported issues',
     });
   }
-  printCheckSection('Code Quality', '\u{2728}', { score: quality.score, label: 'Quality', issues: qualityIssues });
+  if (!isJson) printCheckSection('Code Quality', '\u{2728}', { score: quality.score, label: 'Quality', issues: qualityIssues });
   allIssues.push(...qualityIssues);
 
   // 4. Dependencies check
@@ -106,7 +107,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Run npm audit fix to address known vulnerabilities',
     });
   }
-  printCheckSection('Dependencies', '\u{1F4E6}', { score: deps.score, label: 'Dependencies', issues: depsIssues });
+  if (!isJson) printCheckSection('Dependencies', '\u{1F4E6}', { score: deps.score, label: 'Dependencies', issues: depsIssues });
   allIssues.push(...depsIssues);
 
   // 5. Accessibility check
@@ -121,7 +122,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add alt text to images and aria-labels to interactive elements',
     });
   }
-  printCheckSection('Accessibility', '\u{1F441}\u{FE0F}', { score: a11y.score, label: 'Accessibility', issues: a11yIssues });
+  if (!isJson) printCheckSection('Accessibility', '\u{1F441}\u{FE0F}', { score: a11y.score, label: 'Accessibility', issues: a11yIssues });
   allIssues.push(...a11yIssues);
 
   // 6. Documentation check
@@ -136,7 +137,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add README.md and LICENSE files',
     });
   }
-  printCheckSection('Documentation', '\u{1F4DD}', { score: docs.score, label: 'Documentation', issues: docsIssues });
+  if (!isJson) printCheckSection('Documentation', '\u{1F4DD}', { score: docs.score, label: 'Documentation', issues: docsIssues });
   allIssues.push(...docsIssues);
 
   // 7. Git hygiene check
@@ -151,7 +152,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Use conventional commits: feat:, fix:, docs:, etc.',
     });
   }
-  printCheckSection('Git Hygiene', '\u{1F4C1}', { score: git.score, label: 'Git Hygiene', issues: gitIssues });
+  if (!isJson) printCheckSection('Git Hygiene', '\u{1F4C1}', { score: git.score, label: 'Git Hygiene', issues: gitIssues });
   allIssues.push(...gitIssues);
 
   // 8. CI/CD check
@@ -166,7 +167,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add GitHub Actions to catch issues before they reach production',
     });
   }
-  printCheckSection('CI/CD Pipeline', '\u{2699}\u{FE0F}', { score: ci.score, label: 'CI/CD', issues: ciIssues });
+  if (!isJson) printCheckSection('CI/CD Pipeline', '\u{2699}\u{FE0F}', { score: ci.score, label: 'CI/CD', issues: ciIssues });
   allIssues.push(...ciIssues);
 
   // 9. Feature flags check
@@ -181,7 +182,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add flags.json to safely roll out changes gradually',
     });
   }
-  printCheckSection('Feature Flags', '\u{1F6A9}', { score: flags.score, label: 'Feature Flags', issues: flagIssues });
+  if (!isJson) printCheckSection('Feature Flags', '\u{1F6A9}', { score: flags.score, label: 'Feature Flags', issues: flagIssues });
   allIssues.push(...flagIssues);
 
   // 10. Performance check (new dimension)
@@ -196,7 +197,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Review heavy dependencies and add performance budgets',
     });
   }
-  printCheckSection('Performance', '\u{26A1}', { score: perf.score, label: 'Performance', issues: perfIssues });
+  if (!isJson) printCheckSection('Performance', '\u{26A1}', { score: perf.score, label: 'Performance', issues: perfIssues });
   allIssues.push(...perfIssues);
 
   // 11. Reliability check (new dimension)
@@ -211,7 +212,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add error tracking, retry logic, and health checks',
     });
   }
-  printCheckSection('Reliability', '\u{1F504}', { score: rel.score, label: 'Reliability', issues: relIssues });
+  if (!isJson) printCheckSection('Reliability', '\u{1F504}', { score: rel.score, label: 'Reliability', issues: relIssues });
   allIssues.push(...relIssues);
 
   // 12. Supply chain check (new dimension)
@@ -226,7 +227,7 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
       fix: 'Add lock file, Dependabot, and pin dependency versions',
     });
   }
-  printCheckSection('Supply Chain', '\u{1F6E2}\u{FE0F}', { score: supply.score, label: 'Supply Chain', issues: supplyIssues });
+  if (!isJson) printCheckSection('Supply Chain', '\u{1F6E2}\u{FE0F}', { score: supply.score, label: 'Supply Chain', issues: supplyIssues });
   allIssues.push(...supplyIssues);
 
   // 13. Secrets scan (from staged changes)
@@ -253,6 +254,34 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
   // Calculate overall score using the unified scoring system
   const metrics = calculateMetrics();
   const totalScore = metrics.overall;
+
+  if (isJson) {
+    const jsonOutput = {
+      score: totalScore,
+      scores,
+      issues: allIssues,
+      dimensions: {
+        quality: metrics.quality.score,
+        testing: metrics.testing.score,
+        security: metrics.security.score,
+        efficiency: metrics.efficiency.score,
+        accessibility: metrics.accessibility.score,
+        dependencies: metrics.dependencies.score,
+        documentation: metrics.documentation.score,
+        gitHygiene: metrics.gitHygiene.score,
+        ciPipeline: metrics.ciPipeline.score,
+        featureFlags: metrics.featureFlags.score,
+        performance: metrics.performance.score,
+        reliability: metrics.reliability.score,
+        supplyChain: metrics.supplyChain.score,
+      },
+    };
+    console.log(JSON.stringify(jsonOutput, null, 2));
+    if (allIssues.some((i) => i.severity === 'critical')) {
+      process.exit(1);
+    }
+    return;
+  }
 
   printScoreSummary(totalScore);
   printSummary(totalScore, allIssues);

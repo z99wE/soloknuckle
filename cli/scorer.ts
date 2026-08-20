@@ -244,27 +244,41 @@ export function getQualityScore(): DimensionScore {
   }
 }
 
+// Cache for test results to avoid re-running tests multiple times per invocation
+let _testResultCache: DimensionScore | null = null;
+let _testCacheCwd: string = '';
+
 export function getTestingScore(): DimensionScore {
+  const cwd = process.cwd();
+  if (_testResultCache && _testCacheCwd === cwd) return _testResultCache;
   try {
     const pkgPath = path.join(process.cwd(), 'package.json');
     if (fs.existsSync(pkgPath)) {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       if (pkg.scripts && pkg.scripts.test) {
         try {
-          const output = execSync('npm run test', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe' });
-          return { score: 100, rawOutput: output.substring(0, 1000) };
+          const output = execSync('npm run test', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe', timeout: 30000 });
+          _testCacheCwd = cwd;
+          _testResultCache = { score: 100, rawOutput: output.substring(0, 1000) };
+          return _testResultCache;
         } catch (e: unknown) {
           const output = getExecErrorOutput(e);
           const failCount = (output.match(/fail/ig) || []).length;
           let score = 80 - (failCount * 20);
           if (score < 0) score = 0;
-          return { score, rawOutput: output.substring(0, 1000) };
+          _testCacheCwd = cwd;
+          _testResultCache = { score, rawOutput: output.substring(0, 1000) };
+          return _testResultCache;
         }
       }
     }
-    return { score: 0, rawOutput: 'No test script found in package.json' };
+    _testCacheCwd = cwd;
+    _testResultCache = { score: 0, rawOutput: 'No test script found in package.json' };
+    return _testResultCache;
   } catch (err: unknown) {
-    return { score: 0, rawOutput: `Fatal error analyzing tests: ${getErrorMessage(err)}` };
+    _testCacheCwd = cwd;
+    _testResultCache = { score: 0, rawOutput: `Fatal error analyzing tests: ${getErrorMessage(err)}` };
+    return _testResultCache;
   }
 }
 
@@ -622,19 +636,25 @@ export function getCIPipelineScore(): DimensionScore {
       }
     }
 
-    // Check if CI runs tests and lint
+    // Check if CI runs tests, lint, typecheck, and security audit
     const workflowDir = path.join(process.cwd(), '.github', 'workflows');
     if (fs.existsSync(workflowDir)) {
       const files = fs.readdirSync(workflowDir).filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
       let hasTest = false;
       let hasLint = false;
+      let hasTypecheck = false;
+      let hasSecurityAudit = false;
       for (const file of files) {
         const content = fs.readFileSync(path.join(workflowDir, file), 'utf-8');
         if (content.includes('test') || content.includes('vitest') || content.includes('jest')) hasTest = true;
         if (content.includes('lint') || content.includes('eslint')) hasLint = true;
+        if (content.includes('typecheck') || content.includes('tsc') || content.includes('type-check')) hasTypecheck = true;
+        if (content.includes('audit') || content.includes('snyk') || content.includes('codeql') || content.includes('gitleaks')) hasSecurityAudit = true;
       }
       if (hasTest) { score += 10; report += 'CI runs tests.\n'; }
       if (hasLint) { score += 10; report += 'CI runs linting.\n'; }
+      if (hasTypecheck) { score += 10; report += 'CI runs type checking.\n'; }
+      if (hasSecurityAudit) { score += 10; report += 'CI runs security audit.\n'; }
     }
 
     if (score === 0) {
@@ -658,11 +678,15 @@ export function getFeatureFlagsScore(): DimensionScore {
       report += 'flags.json found.\n';
 
       try {
-        const flags = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'flags.json'), 'utf-8'));
+        const flagsData = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'flags.json'), 'utf-8'));
+        // flags.json structure: { flags: { flagName: { ... } }, ... }
+        const flags = flagsData.flags || flagsData;
         const flagCount = Object.keys(flags).length;
         if (flagCount > 0) {
           score += 20;
           report += `${flagCount} feature flag(s) configured.\n`;
+        } else {
+          report += 'flags.json exists but has no flags defined.\n';
         }
 
         // Check if flags are used in code
