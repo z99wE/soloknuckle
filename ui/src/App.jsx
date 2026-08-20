@@ -185,7 +185,7 @@ function App() {
           Manage LLM audits, sandbox testing, and agent firewalls locally.
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
-          <button 
+          <button aria-label="Get Started with Soloknuckle"
             className="btn" 
             style={{ 
               fontSize: '1.1rem', 
@@ -196,7 +196,6 @@ function App() {
               cursor: 'pointer'
             }} 
             onClick={() => setShowInstallModal(true)}
-            aria-label="Get Started with Soloknuckle"
           >
             Get Started — It's Free
           </button>
@@ -239,7 +238,7 @@ function App() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.8rem' }}>Install Soloknuckle</h2>
-              <button 
+              <button aria-label="Close install modal"
                 onClick={() => setShowInstallModal(false)}
                 style={{ 
                   background: 'none', 
@@ -275,7 +274,7 @@ function App() {
                 fontSize: '1rem'
               }}>
                 <code style={{ flex: 1, overflowX: 'auto' }}>{installCommands[os]}</code>
-                <button
+                <button aria-label="Copy install command"
                   onClick={() => copyToClipboard(installCommands[os], 'primary')}
                   style={{
                     background: copiedCommand === 'primary' ? '#22c55e' : 'var(--primary)',
@@ -309,8 +308,8 @@ function App() {
                 fontSize: '1rem'
               }}>
                 <code style={{ flex: 1, overflowX: 'auto' }}>npm install -g soloknuckle</code>
-                <button
-                  onClick={() => copyToClipboard('npm install -g soloknuckle', 'npm')}
+                <button aria-label="Copy npm install command"
+                  onClick={() => copyToClipboard(`npm install -g ${packageJson.name}`, 'primary')}
                   style={{
                     background: copiedCommand === 'npm' ? '#22c55e' : '#000',
                     color: '#fff',
@@ -344,7 +343,7 @@ function App() {
               </ol>
             </div>
 
-            <button
+            <button aria-label="Got it"
               onClick={() => setShowInstallModal(false)}
               style={{
                 width: '100%',
