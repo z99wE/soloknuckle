@@ -13,6 +13,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'ui/**'],
+    ignores: ['dist/**', 'node_modules/**', 'ui/**', 'vscode/**'],
   },
 ];
