@@ -1,0 +1,175 @@
+{
+  "name": "soloknuckle",
+  "displayName": "Soloknuckle — Production Hygiene",
+  "description": "Production hygiene for AI-assisted development. Catch secrets, destructive commands, flaky tests, and coverage illusions before they ship.",
+  "version": "1.0.0",
+  "publisher": "z99wE",
+  "author": {
+    "name": "Soloknuckle",
+    "url": "https://soloknuckle.dev"
+  },
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/z99wE/soloknuckle"
+  },
+  "homepage": "https://soloknuckle.dev",
+  "bugs": {
+    "url": "https://github.com/z99wE/soloknuckle/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "production hygiene",
+    "code quality",
+    "pre-commit",
+    "secret scanning",
+    "AI code review",
+    "linter",
+    "CI/CD",
+    "developer tools"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "contributes": {
+    "commands": [
+      {
+        "command": "soloknuckle.check",
+        "title": "Run Health Check",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "soloknuckle.init",
+        "title": "Initialize Soloknuckle in This Project",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "soloknuckle.audit",
+        "title": "Run Full Audit",
+        "icon": "$(search)"
+      },
+      {
+        "command": "soloknuckle.fix",
+        "title": "Auto-Fix Violations",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "soloknuckle.dashboard",
+        "title": "Open Dashboard",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "soloknuckle.score",
+        "title": "Show Score",
+        "icon": "$(star-full)"
+      },
+      {
+        "command": "soloknuckle.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "soloknuckle",
+          "title": "Soloknuckle",
+          "icon": "$(shield)"
+        }
+      ]
+    },
+    "views": {
+      "soloknuckle": [
+        {
+          "id": "soloknuckle.dashboard",
+          "name": "Dashboard",
+          "type": "webview"
+        },
+        {
+          "id": "soloknuckle.violations",
+          "name": "Violations",
+          "type": "treeview"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "soloknuckle.violations",
+        "contents": "No violations found.\n[Run Health Check](command:soloknuckle.check)\n[Initialize Project](command:soloknuckle.init)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "soloknuckle.check", "when": "workspaceFolderCount > 0" },
+        { "command": "soloknuckle.init", "when": "workspaceFolderCount > 0" },
+        { "command": "soloknuckle.audit", "when": "workspaceFolderCount > 0" },
+        { "command": "soloknuckle.fix", "when": "workspaceFolderCount > 0" },
+        { "command": "soloknuckle.dashboard", "when": "workspaceFolderCount > 0" },
+        { "command": "soloknuckle.score", "when": "workspaceFolderCount > 0" }
+      ],
+      "editor/context": [
+        {
+          "command": "soloknuckle.check",
+          "when": "workspaceFolderCount > 0",
+          "group": "soloknuckle@1"
+        }
+      ],
+      "statusBar/debugging": [
+        {
+          "command": "soloknuckle.score",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Soloknuckle",
+      "properties": {
+        "soloknuckle.autoCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run health check on file save."
+        },
+        "soloknuckle.strictMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable strict mode (warnings become errors)."
+        },
+        "soloknuckle.enableTelemetry": {
+          "type": "boolean",
+          "default": true,
+          "description": "Send anonymous usage telemetry."
+        },
+        "soloknuckle.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to soloknuckle binary. Leave empty to auto-detect."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "vsce package --no-dependencies",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  }
+}
