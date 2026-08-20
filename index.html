@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Soloknuckle — Production Hygiene for AI-Assisted Development</title>
-  <meta name="description" content="The quality gate for AI-generated code. Secret scanning, command firewall, pre-flight checks, and a visual dashboard — zero configuration, zero cost.">
-  <meta name="keywords" content="AI code quality, production hygiene, code review, developer tools, pre-flight checks, secret scanning, CI/CD, vibe coding, AI safety">
+  <meta name="description" content="Production hygiene CLI for AI-assisted development. Catch secrets, destructive commands, flaky tests, and coverage illusions before they ship — with mutation testing, context-aware validation, and hard CI gates. Zero cost.">
+  <meta name="keywords" content="AI code quality, production hygiene, code review, developer tools, pre-flight checks, secret scanning, CI/CD, vibe coding, AI safety, mutation testing, flaky test detection, SBOM, compliance">
   <meta name="author" content="Soloknuckle">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://soloknuckle.dev">
@@ -13,7 +13,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Soloknuckle — Production Hygiene for AI-Assisted Development">
-  <meta property="og:description" content="The quality gate for AI-generated code. Secret scanning, command firewall, pre-flight checks, and a visual dashboard — zero configuration, zero cost.">
+  <meta property="og:description" content="Production hygiene CLI for AI-assisted development. Catch secrets, destructive commands, flaky tests, and coverage illusions before they ship. Zero cost.">
   <meta property="og:url" content="https://soloknuckle.dev">
   <meta property="og:image" content="https://soloknuckle.dev/og-image.png">
   <meta property="og:site_name" content="Soloknuckle">
@@ -21,7 +21,7 @@
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Soloknuckle — Production Hygiene for AI-Assisted Development">
-  <meta name="twitter:description" content="The quality gate for AI-generated code. Secret scanning, command firewall, pre-flight checks, and a visual dashboard.">
+  <meta name="twitter:description" content="Production hygiene CLI for AI-assisted development. Catch secrets, destructive commands, flaky tests, and coverage illusions before they ship.">
   <meta name="twitter:image" content="https://soloknuckle.dev/og-image.png">
 
   <!-- JSON-LD Structured Data -->
@@ -32,7 +32,7 @@
     "name": "Soloknuckle",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Node.js 20+",
-    "description": "Production hygiene CLI for AI-assisted development. Secret scanning, command firewall, pre-flight checks, and a visual dashboard.",
+    "description": "Production hygiene CLI for AI-assisted development. Catch secrets, destructive commands, flaky tests, and coverage illusions before they ship.",
     "url": "https://soloknuckle.dev",
     "downloadUrl": "https://www.npmjs.com/package/soloknuckle",
     "offers": {
@@ -754,9 +754,9 @@
   <!-- HERO -->
   <section class="hero">
     <div class="container">
-      <div class="hero-badge">Open Source &middot; MIT Licensed &middot; 291 Tests Passing</div>
+      <div class="hero-badge">Open Source &middot; MIT Licensed &middot; 383 Tests Passing</div>
       <h1 class="fade-in">Stop shipping code<br>that <em>breaks in prod</em></h1>
-      <p class="fade-in fade-in-delay-1">Soloknuckle is the quality gate for AI-generated code. It catches security holes, bad patterns, and production risks before they ship — so you can build with confidence.</p>
+      <p class="fade-in fade-in-delay-1">Soloknuckle catches the bugs that AI leaves behind — secrets in code, destructive commands, flaky tests, and 100% coverage that catches 4% of bugs. One command. Zero config. Runs on your machine, not someone else's cloud.</p>
       <div class="hero-actions fade-in fade-in-delay-2">
         <a href="#get-started" class="btn btn-primary">Get Started Free</a>
         <a href="#features" class="btn btn-secondary">See Features</a>
@@ -801,20 +801,24 @@
       <div class="section-header">
         <div class="section-label">The Problem</div>
         <h2>AI writes fast.<br>Fast isn't always safe.</h2>
-        <p>You're shipping faster than ever. But speed without guardrails leaves production exposed.</p>
+        <p>You're shipping faster than ever. But speed without guardrails leaves production exposed — and AI hides the gaps.</p>
       </div>
       <div class="problem-grid">
         <div class="problem-card">
           <h3><span class="problem-icon">🔑</span> Secrets in Code</h3>
-          <p>AI assistants happily paste API keys, tokens, and credentials directly into your codebase. One git push and they're public.</p>
+          <p>AI assistants paste API keys, tokens, and credentials directly into your codebase. One git push and they're public.</p>
         </div>
         <div class="problem-card">
           <h3><span class="problem-icon">💥</span> Destructive Commands</h3>
           <p>A single <code>rm -rf</code> or <code>git push --force</code> from an overeager agent can wipe out hours of work in seconds.</p>
         </div>
         <div class="problem-card">
-          <h3><span class="problem-icon">🔒</span> No Pre-Flight Check</h3>
-          <p>You merge, deploy, and find out on Friday night that type checking, linting, and tests were all skipped.</p>
+          <h3><span class="problem-icon">📊</span> The Coverage Illusion</h3>
+          <p>100% line coverage sounds great — until you learn it caught 4% of bugs. Coverage measures execution, not validation.</p>
+        </div>
+        <div class="problem-card">
+          <h3><span class="problem-icon">🔥</span> Flaky Test Explosion</h3>
+          <p>When the same AI writes code and tests, both share the same blind spots. Flaky tests erode trust and cost $360K+/month in maintenance.</p>
         </div>
       </div>
     </div>
@@ -929,14 +933,14 @@
         <div class="step">
           <div class="step-number">2</div>
           <h3>Check</h3>
-          <p>Runs 13 hygiene dimensions. Shows human-friendly report with scores, issues, and fix suggestions.</p>
+          <p>Runs 13 hygiene dimensions across 7 domains. Shows human-friendly report with scores, issues, and fix suggestions.</p>
           <code>npx soloknuckle check</code>
         </div>
         <div class="step">
           <div class="step-number">3</div>
-          <h3>Fix</h3>
-          <p>Auto-fixes lint issues, missing tests, git init, CI workflows, .gitignore, feature flags, and docs.</p>
-          <code>npx soloknuckle check --fix</code>
+          <h3>Enforce</h3>
+          <p>Hard gates block merges when security, testing, reliability, or supply chain fall below thresholds. Perfect for CI/CD.</p>
+          <code>npx soloknuckle check --strict</code>
         </div>
       </div>
     </div>
@@ -971,6 +975,11 @@
           <tr>
             <td><code>npx soloknuckle check --fix</code></td>
             <td>Auto-fix issues (lint, deps, git, CI, docs)</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle check --strict</code></td>
+            <td>Enforce hard gates — exit code 1 if any dimension fails</td>
             <td><span class="badge-free">Free</span></td>
           </tr>
           <tr>
@@ -1109,11 +1118,14 @@
   <!-- CTA -->
   <section class="cta" id="get-started">
     <div class="container">
-      <h2>Ready to ship code<br>that doesn't break at 3am?</h2>
-      <p>Zero cost. Zero config. One command to production safety.</p>
+      <h2>Ship code that doesn't<br>wake you up at 3am</h2>
+      <p>One command. All 13 dimensions. Hard gates that actually block bad code.</p>
       <div class="hero-install">
         <span class="prompt">$</span>npx soloknuckle init
       </div>
+      <p style="margin-top:20px;font-size:0.9rem;color:var(--bg-alt);">
+        <a href="https://github.com/z99wE/soloknuckle" style="color:var(--accent);text-decoration:none;">View on GitHub</a> &middot; MIT License &middot; Zero config
+      </p>
     </div>
   </section>
 

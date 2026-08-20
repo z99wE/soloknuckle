@@ -1,16 +1,20 @@
 # Soloknuckle
 
-**Production Hygiene Kit for AI-Assisted Development**
+**Production Hygiene for AI-Assisted Development**
 
-A local-first safety layer that prevents AI agents (and humans) from breaking production. Secret scanning, command firewall, pre-flight checks, and a visual dashboard — zero configuration, zero cost.
+Catches the bugs that AI leaves behind — secrets in code, destructive commands, flaky tests, and 100% coverage that catches 4% of bugs. One command. Zero config. Runs on your machine, not someone else's cloud.
 
 ---
 
 ## Table of Contents
 
+- [Why Soloknuckle](#why-soloknuckle)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Commands Reference](#commands-reference)
+- [7-Domain Scorecard Model](#7-domain-scorecard-model)
+- [Hard Gates](#hard-gates)
+- [Unique Testing Features](#unique-testing-features)
 - [IDE Integration](#ide-integration)
 - [LLM Configuration](#llm-configuration)
 - [Security Model](#security-model)
@@ -111,9 +115,14 @@ npx soloknuckle init
 # Run pre-flight checks before pushing
 npx soloknuckle check
 
+# Enforce hard gates in CI (exits non-zero on failure)
+npx soloknuckle check --strict
+
 # Launch visual dashboard
 npx soloknuckle ui
 ```
+
+**Recommended CI setup:** Add `npx soloknuckle check --strict` to your CI pipeline. It enforces minimum thresholds for security (≥70), testing (≥70), reliability (≥60), and supply chain (≥50). Merges that fail these gates are blocked automatically.
 
 ---
 
@@ -637,7 +646,7 @@ npx soloknuckle compliance
 
 ## Unique Testing Features (The Gaps Nobody Else Fills)
 
-These features address critical testing gaps that no existing tool covers:
+These features address critical testing gaps that no existing tool covers. Each one attacks a specific failure mode that AI-assisted development introduces.
 
 ### 1. Mutation Testing Gate (The Coverage Illusion Killer)
 
@@ -710,6 +719,17 @@ if (!evaluateFlakyGate(result).passed) {
 **What it does:** Detects flaky tests by analyzing patterns (setTimeout, Math.random, Date, network calls) and running tests multiple times to catch intermittent failures.
 
 **Why it matters:** A 500-test suite costs roughly $360,750 a month to maintain manually. Selector changes (32%) and flow changes (27%) drive most failures. Flaky tests erode trust in your test suite.
+
+---
+
+## Who Uses This
+
+| Persona | Pain Point | How Soloknuckle Helps |
+|---------|-----------|----------------------|
+| **Solo Founders** | No QA team, shipping fast with AI | Pre-flight gate catches what AI misses before it ships |
+| **AI-Assisted Teams** | Don't know how much code is AI-written | Telemetry tracks AI vs human contributions per week |
+| **Open Source Maintainers** | Contributors submit AI-generated code | `--strict` mode enforces quality gates in CI |
+| **Agencies & Consultancies** | Client projects need to be production-ready | 7-domain scorecard proves quality with numbers |
 
 ---
 
