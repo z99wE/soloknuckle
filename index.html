@@ -772,19 +772,19 @@
     <div class="container">
       <div class="stats">
         <div class="stat">
-          <div class="stat-number">10</div>
+          <div class="stat-number">13</div>
           <div class="stat-label">Hygiene Dimensions</div>
         </div>
         <div class="stat">
-          <div class="stat-number">8</div>
-          <div class="stat-label">Hygiene Checks</div>
+          <div class="stat-number">7</div>
+          <div class="stat-label">Domain Scorecard</div>
         </div>
         <div class="stat">
-          <div class="stat-number">8</div>
-          <div class="stat-label">MCP Tools</div>
+          <div class="stat-number">4</div>
+          <div class="stat-label">Hard Gates</div>
         </div>
         <div class="stat">
-          <div class="stat-number">291</div>
+          <div class="stat-number">383</div>
           <div class="stat-label">Tests Passing</div>
         </div>
         <div class="stat">
@@ -826,7 +826,7 @@
       <div class="section-header">
         <div class="section-label">Features</div>
         <h2>Everything you need<br>to ship safely.</h2>
-        <p>10 dimensions of production hygiene, one command away.</p>
+        <p>13 dimensions of production hygiene, one command away.</p>
       </div>
       <div class="features-grid">
         <div class="feature-card">
@@ -850,7 +850,7 @@
         <div class="feature-card">
           <span class="feature-icon">📊</span>
           <h3>Project Health Score</h3>
-          <p>0–100 score across 10 dimensions: quality, testing, security, efficiency, accessibility, dependencies, documentation, and more.</p>
+          <p>0–100 score across 13 dimensions: quality, testing, security, efficiency, accessibility, dependencies, documentation, performance, reliability, and supply chain.</p>
           <span class="feature-tag">Analytics</span>
         </div>
         <div class="feature-card">
@@ -883,6 +883,30 @@
           <p>Neo-brutalist web UI for project health, telemetry, command firewall logs, and LLM configuration. Run locally on port 3000.</p>
           <span class="feature-tag">Interface</span>
         </div>
+        <div class="feature-card">
+          <span class="feature-icon">🧬</span>
+          <h3>Mutation Testing Gate</h3>
+          <p>Applies 5 mutation types to source code and checks if tests catch them — proving behavior validation, not just line execution.</p>
+          <span class="feature-tag">Unique</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔍</span>
+          <h3>Context-Aware Test Validator</h3>
+          <p>Detects when AI-generated tests share blind spots — missing mocks, real dependencies, no assertions, hardcoded values.</p>
+          <span class="feature-tag">Unique</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📋</span>
+          <h3>Caller Contract Checker</h3>
+          <p>Extracts function signatures from source and validates test calls match — catching parameter mismatches and contract violations.</p>
+          <span class="feature-tag">Unique</span>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔥</span>
+          <h3>Flaky Test Detector</h3>
+          <p>Identifies intermittent failures by pattern analysis and multi-run detection. Estimates maintenance cost at $100/flaky test/month.</p>
+          <span class="feature-tag">Unique</span>
+        </div>
       </div>
     </div>
   </section>
@@ -905,7 +929,7 @@
         <div class="step">
           <div class="step-number">2</div>
           <h3>Check</h3>
-          <p>Runs 10 hygiene dimensions. Shows human-friendly report with scores, issues, and fix suggestions.</p>
+          <p>Runs 13 hygiene dimensions. Shows human-friendly report with scores, issues, and fix suggestions.</p>
           <code>npx soloknuckle check</code>
         </div>
         <div class="step">
@@ -923,7 +947,7 @@
     <div class="container">
       <div class="section-header">
         <div class="section-label">Commands</div>
-        <h2>One CLI. Ten commands.<br>Complete coverage.</h2>
+        <h2>One CLI. Thirteen commands.<br>Complete coverage.</h2>
       </div>
       <table class="commands-table">
         <thead>
@@ -951,7 +975,7 @@
           </tr>
           <tr>
             <td><code>npx soloknuckle score</code></td>
-            <td>Project health score (0–100) across 10 dimensions</td>
+            <td>Project health score (0–100) across 13 dimensions</td>
             <td><span class="badge-free">Free</span></td>
           </tr>
           <tr>
@@ -982,6 +1006,16 @@
           <tr>
             <td><code>npx soloknuckle persona</code></td>
             <td>Generate directory-specific agent rules</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle sbom</code></td>
+            <td>Generate CycloneDX SBOM for compliance</td>
+            <td><span class="badge-free">Free</span></td>
+          </tr>
+          <tr>
+            <td><code>npx soloknuckle compliance</code></td>
+            <td>Self-compliance audit — does Soloknuckle pass its own gates?</td>
             <td><span class="badge-free">Free</span></td>
           </tr>
         </tbody>
