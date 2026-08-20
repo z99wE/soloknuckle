@@ -41,7 +41,7 @@ describe('MCP Server', () => {
     it('returns all registered tools', () => {
       const res = handleRequest({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
       const tools = (res.result as { tools: typeof TOOLS }).tools;
-      expect(tools.length).toBe(8);
+      expect(tools.length).toBe(9);
       expect(tools.map(t => t.name)).toContain('soloknuckle_score');
       expect(tools.map(t => t.name)).toContain('soloknuckle_telemetry');
       expect(tools.map(t => t.name)).toContain('soloknuckle_intercept');

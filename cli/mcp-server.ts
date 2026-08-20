@@ -4,6 +4,7 @@ import { calculateMetrics, generateSuggestions } from './scorer';
 import { getTelemetry } from './telemetry';
 import { interceptCommand } from './interceptor';
 import { scanDiffForSecretsAndPII } from './scanner';
+import { SupplyChainSentinel } from './supply-chain-sentinel';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -81,6 +82,17 @@ const TOOLS = [
     name: 'soloknuckle_branches',
     description: 'List local git branches and their status.',
     inputSchema: { type: 'object' as const, properties: {}, required: [] as string[] },
+  },
+  {
+    name: 'soloknuckle_supply_chain_sentinel',
+    description: 'Detect supply chain compromise signals: dormant packages with sudden updates, new lifecycle scripts (postinstall/preinstall), typosquatting patterns, and untrusted publishers. Runs npm audit + custom behavioral analysis.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        depth: { type: 'string', enum: ['quick', 'standard', 'deep'], description: 'Scan depth: quick (lockfile only), standard (+package.json), deep (+registry checks)' },
+      },
+      required: [] as string[],
+    },
   },
 ];
 
@@ -219,6 +231,13 @@ function handleToolCall(id: number | string, name: string, args: Record<string, 
         } catch {
           result = [];
         }
+        break;
+      }
+
+      case 'soloknuckle_supply_chain_sentinel': {
+        const depth = String(args.depth || 'standard');
+        const sentinel = new SupplyChainSentinel();
+        result = sentinel.scan(depth as 'quick' | 'standard' | 'deep');
         break;
       }
 

@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers: []
+    assignees: []
+    labels:
+      - "dependencies"
+      - "security"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
