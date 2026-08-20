@@ -42,36 +42,131 @@ You are integrated with Soloknuckle, a Production Hygiene OS. You have access to
 - \`npx soloknuckle persona <type> <folder>\`: Applies bounded-context agent rules to specific directories.
 `;
 
-// Default action (Wizard) when no args are provided
+// Extracted init logic — used by both the default handler and the init command
+function runInit(target: string): void {
+  console.log(chalk.green('🚀 Initializing Soloknuckle Production Hygiene Kit...'));
+  console.log(chalk.blue(`Target directory: ${target}`));
+
+  // Core Rules
+  const agentsMdPath = path.join(target, 'AGENTS.md');
+  if (!fs.existsSync(agentsMdPath)) {
+    fs.writeFileSync(agentsMdPath, '# Production Hygiene Rules\n\n1. Do not push to main.\n2. Use feature flags.');
+    console.log(chalk.green('✅ Created AGENTS.md'));
+  }
+
+  // Git Hooks (via Husky compatibility or native)
+  const hooksDir = path.join(target, '.git', 'hooks');
+  if (fs.existsSync(path.join(target, '.git'))) {
+    if (!fs.existsSync(hooksDir)) fs.mkdirSync(hooksDir, { recursive: true });
+    const prePushPath = path.join(hooksDir, 'pre-push');
+    const hookContent = `#!/usr/bin/env bash
+branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$branch" = "main" ]; then
+  echo "❌ Direct pushes to main are blocked by Soloknuckle."
+  exit 1
+fi
+echo "🛡️ Soloknuckle running pre-push checks..."
+npx soloknuckle check
+if [ $? -ne 0 ]; then
+  echo "❌ Soloknuckle check failed. Push aborted."
+  exit 1
+fi
+exit 0`;
+    fs.writeFileSync(prePushPath, hookContent);
+    fs.chmodSync(prePushPath, '755');
+
+    const preCommitPath = path.join(hooksDir, 'pre-commit');
+    const preCommitContent = `#!/usr/bin/env bash
+echo "🛡️ Soloknuckle checking for secrets/PII before commit..."
+npx soloknuckle check
+if [ $? -ne 0 ]; then
+  echo "❌ Pre-commit checks failed. Commit aborted."
+  exit 1
+fi
+exit 0`;
+    fs.writeFileSync(preCommitPath, preCommitContent);
+    fs.chmodSync(preCommitPath, '755');
+    console.log(chalk.green('✅ Installed git pre-push and pre-commit hooks (Husky-compatible)'));
+  }
+
+  // Agentic IDE Plugin & Skill Generation
+  const agentInstructions = 'Always read AGENTS.md before modifying code. If you need to know what tools are available, run `npx soloknuckle capabilities`. Run `npx soloknuckle check` before committing.';
+
+  const cursorRulesPath = path.join(target, '.cursorrules');
+  if (!fs.existsSync(cursorRulesPath)) {
+    fs.writeFileSync(cursorRulesPath, agentInstructions);
+    console.log(chalk.green('✅ Created .cursorrules for Cursor AI'));
+  }
+
+  const windsurfRulesPath = path.join(target, '.windsurfrules');
+  if (!fs.existsSync(windsurfRulesPath)) {
+    fs.writeFileSync(windsurfRulesPath, agentInstructions);
+    console.log(chalk.green('✅ Created .windsurfrules for Windsurf IDE'));
+  }
+
+  const skillMdPath = path.join(target, 'SKILL.md');
+  if (!fs.existsSync(skillMdPath)) {
+    const skillContent = `---
+name: production-hygiene-enforcer
+description: Enforces safe deployment rules and hygiene practices.
+---
+# Instructions
+${agentInstructions}`;
+    fs.writeFileSync(skillMdPath, skillContent);
+    console.log(chalk.green('✅ Created SKILL.md for Claude Code / Antigravity / Gemini'));
+  }
+
+  const replitPath = path.join(target, '.replit');
+  if (!fs.existsSync(replitPath)) {
+    fs.writeFileSync(replitPath, 'run = "npx soloknuckle ui"\n');
+    console.log(chalk.green('✅ Created .replit config for Replit Agent'));
+  }
+
+  const mcpPath = path.join(target, 'mcp-config.json');
+  if (!fs.existsSync(mcpPath)) {
+    const mcpContent = JSON.stringify({
+      mcpServers: {
+        soloknuckle: {
+          command: "npx",
+          args: ["soloknuckle", "capabilities"]
+        }
+      }
+    }, null, 2);
+    fs.writeFileSync(mcpPath, mcpContent);
+    console.log(chalk.green('✅ Created mcp-config.json for ChatGPT Codex / Lovable / Claude Desktop integration'));
+  }
+
+  console.log(chalk.cyan('✨ Initialization complete. Your project is now fully protected and Multi-Pronged Agent-Ready.'));
+}
+
+// Default action when no args are provided: auto-detect and run the right command
 if (process.argv.length <= 2) {
   (async () => {
-    console.log(chalk.magenta.bold('\nWelcome to Soloknuckle 🛡️\n'));
-    const { action } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'action',
-        message: 'What would you like to do?',
-        choices: [
-          { name: '🛡️  Run Pre-flight Checks (check)', value: 'check' },
-          { name: '🤖 Audit Local Changes (audit)', value: 'audit' },
-          { name: '🔍 Calculate Project Health Score (score)', value: 'score' },
-          { name: '🎨 Launch Founder UI Dashboard (ui)', value: 'ui' },
-          { name: '📊 View Agent Telemetry (telemetry)', value: 'telemetry' },
-          { name: '🏗️  Scaffold Agent Context (init)', value: 'init' },
-          { name: '❌ Exit', value: 'exit' }
-        ]
-      }
-    ]);
+    const target = process.cwd();
+    const agentsMd = path.join(target, 'AGENTS.md');
+    const isInitialized = fs.existsSync(agentsMd);
 
-    if (action === 'exit') {
-      process.exit(0);
-    }
-    
-    // Execute the corresponding command logic
-    try {
-      execSync(`npx ts-node cli/index.ts ${action}`, { stdio: 'inherit', cwd: process.cwd() });
-    } catch (e: unknown) {
-      // Errors are already piped to stdout
+    if (!isInitialized) {
+      // First time: auto-init
+      console.log(chalk.cyan.bold('\n🛡️  Soloknuckle — First-time setup\n'));
+      console.log(chalk.white('No AGENTS.md found. Setting up production hygiene for this project...\n'));
+      runInit(target);
+      console.log(chalk.green.bold('\n✅ You\'re protected! Run this before every push:\n'));
+      console.log(chalk.white('   npx soloknuckle check\n'));
+      console.log(chalk.dim('Other commands:'));
+      console.log(chalk.dim('   npx soloknuckle audit    — review AI-generated code'));
+      console.log(chalk.dim('   npx soloknuckle score    — see your health score'));
+      console.log(chalk.dim('   npx soloknuckle ui       — open the dashboard\n'));
+    } else {
+      // Already initialized: run check
+      console.log(chalk.cyan.bold('\n🛡️  Soloknuckle — Production check\n'));
+      console.log(chalk.dim('Running pre-flight checks...\n'));
+      await runCheck({ fix: false });
+      console.log(chalk.dim('\nOther commands:'));
+      console.log(chalk.dim('   npx soloknuckle audit    — review AI-generated code'));
+      console.log(chalk.dim('   npx soloknuckle score    — see your health score'));
+      console.log(chalk.dim('   npx soloknuckle ui       — open the dashboard'));
+      console.log(chalk.dim('   npx soloknuckle init     — re-run setup\n'));
     }
     process.exit(0);
   })();
@@ -91,101 +186,7 @@ program
   .command('init')
   .description('Scaffolds AGENTS.md, git hooks, IDE plugin configs, and Agent Skills into any target project')
   .action(() => {
-    console.log(chalk.green('🚀 Initializing Soloknuckle Production Hygiene Kit...'));
-    
-    const target = process.cwd();
-    console.log(chalk.blue(`Target directory: ${target}`));
-    
-    // Core Rules
-    const agentsMdPath = path.join(target, 'AGENTS.md');
-    if (!fs.existsSync(agentsMdPath)) {
-      fs.writeFileSync(agentsMdPath, '# Production Hygiene Rules\n\n1. Do not push to main.\n2. Use feature flags.');
-      console.log(chalk.green('✅ Created AGENTS.md'));
-    }
-
-    // Git Hooks (via Husky compatibility or native)
-    const hooksDir = path.join(target, '.git', 'hooks');
-    if (fs.existsSync(path.join(target, '.git'))) {
-      if (!fs.existsSync(hooksDir)) fs.mkdirSync(hooksDir, { recursive: true });
-      const prePushPath = path.join(hooksDir, 'pre-push');
-      const hookContent = `#!/usr/bin/env bash
-branch="$(git rev-parse --abbrev-ref HEAD)"
-if [ "$branch" = "main" ]; then
-  echo "❌ Direct pushes to main are blocked by Soloknuckle."
-  exit 1
-fi
-echo "🛡️ Soloknuckle running pre-push checks..."
-npx soloknuckle check
-if [ $? -ne 0 ]; then
-  echo "❌ Soloknuckle check failed. Push aborted."
-  exit 1
-fi
-exit 0`;
-      fs.writeFileSync(prePushPath, hookContent);
-      fs.chmodSync(prePushPath, '755');
-      
-      const preCommitPath = path.join(hooksDir, 'pre-commit');
-      const preCommitContent = `#!/usr/bin/env bash
-echo "🛡️ Soloknuckle checking for secrets/PII before commit..."
-npx soloknuckle check
-if [ $? -ne 0 ]; then
-  echo "❌ Pre-commit checks failed. Commit aborted."
-  exit 1
-fi
-exit 0`;
-      fs.writeFileSync(preCommitPath, preCommitContent);
-      fs.chmodSync(preCommitPath, '755');
-      console.log(chalk.green('✅ Installed git pre-push and pre-commit hooks (Husky-compatible)'));
-    }
-
-    // Agentic IDE Plugin & Skill Generation
-    const agentInstructions = 'Always read AGENTS.md before modifying code. If you need to know what tools are available, run `npx soloknuckle capabilities`. Run `npx soloknuckle check` before committing.';
-    
-    const cursorRulesPath = path.join(target, '.cursorrules');
-    if (!fs.existsSync(cursorRulesPath)) {
-      fs.writeFileSync(cursorRulesPath, agentInstructions);
-      console.log(chalk.green('✅ Created .cursorrules for Cursor AI'));
-    }
-
-    const windsurfRulesPath = path.join(target, '.windsurfrules');
-    if (!fs.existsSync(windsurfRulesPath)) {
-      fs.writeFileSync(windsurfRulesPath, agentInstructions);
-      console.log(chalk.green('✅ Created .windsurfrules for Windsurf IDE'));
-    }
-
-    const skillMdPath = path.join(target, 'SKILL.md');
-    if (!fs.existsSync(skillMdPath)) {
-      const skillContent = `---
-name: production-hygiene-enforcer
-description: Enforces safe deployment rules and hygiene practices.
----
-# Instructions
-${agentInstructions}`;
-      fs.writeFileSync(skillMdPath, skillContent);
-      console.log(chalk.green('✅ Created SKILL.md for Claude Code / Antigravity / Gemini'));
-    }
-
-    const replitPath = path.join(target, '.replit');
-    if (!fs.existsSync(replitPath)) {
-      fs.writeFileSync(replitPath, 'run = "npx soloknuckle ui"\n');
-      console.log(chalk.green('✅ Created .replit config for Replit Agent'));
-    }
-
-    const mcpPath = path.join(target, 'mcp-config.json');
-    if (!fs.existsSync(mcpPath)) {
-      const mcpContent = JSON.stringify({
-        mcpServers: {
-          soloknuckle: {
-            command: "npx",
-            args: ["soloknuckle", "capabilities"]
-          }
-        }
-      }, null, 2);
-      fs.writeFileSync(mcpPath, mcpContent);
-      console.log(chalk.green('✅ Created mcp-config.json for ChatGPT Codex / Lovable / Claude Desktop integration'));
-    }
-
-    console.log(chalk.cyan('✨ Initialization complete. Your project is now fully protected and Multi-Pronged Agent-Ready.'));
+    runInit(process.cwd());
   });
 
 program
@@ -347,4 +348,6 @@ program
     suggestions.forEach(s => console.log(chalk.green(`💡 ${s}`)));
   });
 
-program.parse(process.argv);
+if (process.argv.length > 2) {
+  program.parse(process.argv);
+}
