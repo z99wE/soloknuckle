@@ -361,17 +361,19 @@ export function getAccessibilityScore(): DimensionScore {
             });
           }
 
-          const hasButton = content.match(/<button[^>]*>/g);
-          if (hasButton) {
-            hasButton.forEach(btn => {
-              const hasAriaLabel = btn.includes('aria-label');
-              const hasAriaLabelledBy = btn.includes('aria-labelledby');
-              const hasTitle = btn.includes('title=');
+          const lines = content.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes('<button')) {
+              const windowEnd = Math.min(i + 3, lines.length);
+              const btnWindow = lines.slice(i, windowEnd).join(' ');
+              const hasAriaLabel = btnWindow.includes('aria-label');
+              const hasAriaLabelledBy = btnWindow.includes('aria-labelledby');
+              const hasTitle = btnWindow.includes('title=');
               if (!hasAriaLabel && !hasAriaLabelledBy && !hasTitle) {
                 a11yIssues++;
-                report += `Button lacks accessible name in ${file}\n`;
+                report += `Button lacks accessible name in ${file}:${i + 1}\n`;
               }
-            });
+            }
           }
         }
       }

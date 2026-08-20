@@ -180,7 +180,7 @@ function App() {
               </div>
             </div>
           </div>
-          <button className="btn" style={{ width: '100%', marginTop: '1.5rem' }} onClick={async () => { setSafeModeStatus('Saving...'); try { await fetch('/api/safe-mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hooksEnabled, aiCommitsEnabled }) }); setSafeModeStatus('Config Saved'); } catch { setSafeModeStatus('Error saving'); } setTimeout(() => setSafeModeStatus(''), 3000); }}>Save Config</button>
+          <button className="btn" style={{ width: '100%', marginTop: '1.5rem' }} onClick={async () => { setSafeModeStatus('Saving...'); try { await fetch('/api/safe-mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hooksEnabled, aiCommitsEnabled }) }); setSafeModeStatus('Config Saved'); } catch { setSafeModeStatus('Error saving'); } setTimeout(() => setSafeModeStatus(''), 3000); }} aria-label="Save safe mode configuration">Save Config</button>
           {safeModeStatus && <p style={{ fontWeight: 'bold', color: 'var(--primary)', marginTop: '0.5rem' }}>{safeModeStatus}</p>}
         </section>
 
@@ -218,7 +218,7 @@ function App() {
 
           {/* Add provider form */}
           {!showAddProvider ? (
-            <button className="btn" style={{ width: '100%', backgroundColor: '#000', color: 'var(--secondary)' }} onClick={() => setShowAddProvider(true)}>
+            <button className="btn" style={{ width: '100%', backgroundColor: '#000', color: 'var(--secondary)' }} onClick={() => setShowAddProvider(true)} aria-label="Add new AI provider">
               + Add Provider
             </button>
           ) : (
@@ -247,7 +247,7 @@ function App() {
               )}
               <label htmlFor="provider-model" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 800, fontSize: '0.85rem' }}>Model <span style={{ fontWeight: 400, opacity: 0.5 }}>(optional)</span></label>
               <input id="provider-model" placeholder={PROVIDER_DEFAULTS[newProviderType]?.model || ''} value={newProviderModel} onChange={(e) => setNewProviderModel(e.target.value)} style={{ width: '100%', padding: '0.6rem', border: 'var(--border-width) solid var(--border-color)', marginBottom: '0.75rem' }} />
-              <button className="btn" style={{ width: '100%', backgroundColor: '#000', color: 'var(--secondary)' }} onClick={handleAddProvider}>Save Provider</button>
+                <button className="btn" style={{ width: '100%', backgroundColor: '#000', color: 'var(--secondary)' }} onClick={handleAddProvider} aria-label="Save new provider">Save Provider</button>
             </div>
           )}
           {providerStatus && <p style={{ fontWeight: 'bold', color: providerStatus.startsWith('Connection OK') || providerStatus === 'Provider activated!' || providerStatus === 'Provider added!' ? 'green' : 'var(--primary)', marginTop: '0.5rem', fontSize: '0.9rem' }}>{providerStatus}</p>}
@@ -286,7 +286,7 @@ function App() {
               </pre>
             )}
           </div>
-          <button className="btn" style={{ width: '100%', marginTop: '1rem', backgroundColor: '#000', color: 'var(--tertiary)' }} onClick={handleSandboxExecute} disabled={isExecuting}>
+          <button className="btn" style={{ width: '100%', marginTop: '1rem', backgroundColor: '#000', color: 'var(--tertiary)' }} onClick={handleSandboxExecute} disabled={isExecuting} aria-label="Execute command in sandbox">
             {isExecuting ? 'Executing...' : 'Execute in Sandbox'}
           </button>
         </section>
@@ -327,7 +327,7 @@ function App() {
                 <div style={{ background: '#fff', border: '2px solid #000', padding: '0.5rem', fontWeight: 'bold', gridColumn: '1 / -1' }}>Accessibility: {metrics.accessibility?.score}</div>
               </div>
               {!aiSuggestions && (
-                <button className="btn" style={{ width: '100%', marginTop: '1rem', backgroundColor: '#000', color: 'var(--secondary)' }} onClick={handleGenerateSuggestions} disabled={isAnalyzing}>
+                <button className="btn" style={{ width: '100%', marginTop: '1rem', backgroundColor: '#000', color: 'var(--secondary)' }} onClick={handleGenerateSuggestions} disabled={isAnalyzing} aria-label="Generate AI-powered improvement suggestions">
                   {isAnalyzing ? 'Analyzing with LLM...' : 'Generate AI Suggestions'}
                 </button>
               )}
@@ -357,7 +357,7 @@ function App() {
               git checkout -b feature/your-feature-name
             </code>
           </div>
-          <button className="btn" style={{ width: '100%', marginTop: '1.5rem', backgroundColor: '#fff', color: '#000' }} onClick={() => alert('Violation acknowledged. Apply the suggested fix before committing.')}>Acknowledge</button>
+          <button className="btn" style={{ width: '100%', marginTop: '1.5rem', backgroundColor: '#fff', color: '#000' }} onClick={() => alert('Violation acknowledged. Apply the suggested fix before committing.')} aria-label="Acknowledge detected violation">Acknowledge</button>
         </div>
 
         {/* Card 6: Telemetry Dashboard */}
@@ -375,7 +375,7 @@ function App() {
               <strong>Lines by AI:</strong> {telemetry?.linesByAi || 0}
             </div>
           </div>
-          <button className="btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem' }} onClick={() => alert('Full report: run `soloknuckle audit` in your terminal for detailed breakdown.')}>View Full Report</button>
+          <button className="btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem' }} onClick={() => alert('Full report: run `soloknuckle audit` in your terminal for detailed breakdown.')} aria-label="View full telemetry report">View Full Report</button>
         </div>
 
         {/* Card 7: Persona Manager */}
@@ -392,7 +392,7 @@ function App() {
               <option>Data Engineer</option>
             </select>
           </div>
-          <button className="btn" style={{ width: '100%', marginTop: '1.5rem' }} onClick={async () => { setPersonaStatus('Applying...'); try { const res = await fetch('/api/personas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetDir: personaTargetDir, personaProfile }) }); setPersonaStatus(res.ok ? 'Persona Applied!' : 'Failed to apply.'); } catch { setPersonaStatus('Error.'); } setTimeout(() => setPersonaStatus(''), 3000); }}>Apply Persona</button>
+          <button className="btn" style={{ width: '100%', marginTop: '1.5rem' }} onClick={async () => { setPersonaStatus('Applying...'); try { const res = await fetch('/api/personas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetDir: personaTargetDir, personaProfile }) }); setPersonaStatus(res.ok ? 'Persona Applied!' : 'Failed to apply.'); } catch { setPersonaStatus('Error.'); } setTimeout(() => setPersonaStatus(''), 3000); }} aria-label="Apply selected persona to target directory">Apply Persona</button>
           {personaStatus && <p style={{ fontWeight: 'bold', color: 'var(--primary)', marginTop: '0.5rem' }}>{personaStatus}</p>}
         </section>
       </main>
