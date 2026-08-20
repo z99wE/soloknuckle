@@ -26,10 +26,41 @@ vi.mock('../cli/scorer', () => ({
   getCIPipelineScore: vi.fn(() => ({ score: 100 })),
   getFeatureFlagsScore: vi.fn(() => ({ score: 100 })),
   getEfficiencyScore: vi.fn(() => ({ score: 100 })),
+  getPerformanceScore: vi.fn(() => ({ score: 100 })),
+  getReliabilityScore: vi.fn(() => ({ score: 100 })),
+  getSupplyChainScore: vi.fn(() => ({ score: 100 })),
+  calculateMetrics: vi.fn(() => ({
+    overall: 100,
+    quality: { score: 100, weight: 0.15 },
+    testing: { score: 100, weight: 0.15 },
+    security: { score: 100, weight: 0.15 },
+    efficiency: { score: 100, weight: 0.1 },
+    accessibility: { score: 100, weight: 0.1 },
+    performance: { score: 100, weight: 0.1 },
+    reliability: { score: 100, weight: 0.1 },
+    supplyChain: { score: 100, weight: 0.15 },
+  })),
 }));
 
 vi.mock('../cli/scanner', () => ({
   scanDiffForSecretsAndPII: vi.fn(() => []),
+}));
+
+vi.mock('../cli/gates', () => ({
+  evaluateGates: vi.fn(() => ({
+    scorecard: {
+      codeQuality: { score: 100, dimensions: ['quality'], status: 'healthy' },
+      testing: { score: 100, dimensions: ['testing'], status: 'healthy' },
+      securityCompliance: { score: 100, dimensions: ['security'], status: 'healthy' },
+      performance: { score: 100, dimensions: ['performance'], status: 'healthy' },
+      reliability: { score: 100, dimensions: ['reliability'], status: 'healthy' },
+      dependencies: { score: 100, dimensions: ['dependencies', 'supplyChain'], status: 'healthy' },
+      docsVisibility: { score: 100, dimensions: ['docs', 'ci', 'featureFlags'], status: 'healthy' },
+    },
+    gateResult: { passed: true, failures: [] },
+  })),
+  printGateReport: vi.fn(),
+  printSevenDomainScorecard: vi.fn(),
 }));
 
 describe('check command', () => {

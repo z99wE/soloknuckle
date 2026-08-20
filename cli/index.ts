@@ -20,6 +20,8 @@ import { getOrPromptApiKey } from './config';
 import { callLLM } from './llm-client';
 import { calculateMetrics, generateSuggestions } from './scorer';
 import { runCheck } from './check';
+import { generateSbom, writeSbom } from './sbom';
+import { runCompliance } from './compliance';
 
 const program = new Command();
 
@@ -33,13 +35,15 @@ const CAPABILITIES = `
 # Soloknuckle Agent Capabilities Registry
 
 You are integrated with Soloknuckle, a Production Hygiene OS. You have access to the following commands:
-- \`npx soloknuckle check\`: Runs strict pre-flight checks (lint, test, typecheck, secret scan). MUST be run before any git commit.
+- \`npx soloknuckle check\`: Runs strict pre-flight checks (lint, test, typecheck, secret scan). Supports --strict mode for hard gate enforcement. MUST be run before any git commit.
 - \`npx soloknuckle audit\`: Analyzes local uncommitted code against AGENTS.md rules.
 - \`npx soloknuckle score\`: Calculates a 0-100 project health score and provides AI suggestions.
 - \`npx soloknuckle init\`: Scaffolds hooks and rules for any project.
 - \`npx soloknuckle ui\`: Launches the visual dashboard and deterministic agent sandbox.
 - \`npx soloknuckle pr\`: Auto-generates a PR description from a git diff.
 - \`npx soloknuckle persona <type> <folder>\`: Applies bounded-context agent rules to specific directories.
+- \`npx soloknuckle sbom\`: Generates a CycloneDX-like SBOM from your dependencies.
+- \`npx soloknuckle compliance\`: Audits your codebase for production hygiene compliance.
 `;
 
 // Extracted init logic — used by both the default handler and the init command
@@ -152,11 +156,13 @@ if (process.argv.length <= 2) {
       console.log(chalk.white('No AGENTS.md found. Setting up production hygiene for this project...\n'));
       runInit(target);
       console.log(chalk.green.bold('\n✅ You\'re protected! Run this before every push:\n'));
-      console.log(chalk.white('   npx soloknuckle check\n'));
+      console.log(chalk.white('   npx soloknuckle check --strict\n'));
       console.log(chalk.dim('Other commands:'));
       console.log(chalk.dim('   npx soloknuckle audit    — review AI-generated code'));
       console.log(chalk.dim('   npx soloknuckle score    — see your health score'));
-      console.log(chalk.dim('   npx soloknuckle ui       — open the dashboard\n'));
+      console.log(chalk.dim('   npx soloknuckle ui       — open the dashboard'));
+      console.log(chalk.dim('   npx soloknuckle sbom     — generate SBOM'));
+      console.log(chalk.dim('   npx soloknuckle compliance — audit compliance\n'));
     } else {
       // Already initialized: run check
       console.log(chalk.cyan.bold('\n🛡️  Soloknuckle — Production check\n'));
@@ -166,7 +172,9 @@ if (process.argv.length <= 2) {
       console.log(chalk.dim('   npx soloknuckle audit    — review AI-generated code'));
       console.log(chalk.dim('   npx soloknuckle score    — see your health score'));
       console.log(chalk.dim('   npx soloknuckle ui       — open the dashboard'));
-      console.log(chalk.dim('   npx soloknuckle init     — re-run setup\n'));
+      console.log(chalk.dim('   npx soloknuckle init     — re-run setup'));
+      console.log(chalk.dim('   npx soloknuckle sbom     — generate SBOM'));
+      console.log(chalk.dim('   npx soloknuckle compliance — audit compliance\n'));
     }
     process.exit(0);
   })();
@@ -194,6 +202,8 @@ program
   .description('Check if your code is production-ready (human-friendly output)')
   .option('--fix', 'Attempt to auto-fix issues')
   .option('--verbose', 'Show detailed output')
+  .option('--strict', 'Enforce hard gates — fail if critical dimensions are below threshold')
+  .option('--format <type>', 'Output format: text (default) or json', 'text')
   .action(async (options) => {
     await runCheck(options);
   });
@@ -342,10 +352,28 @@ program
     console.log(chalk.blue(`- Security: ${metrics.security.score}`));
     console.log(chalk.blue(`- Efficiency: ${metrics.efficiency.score}`));
     console.log(chalk.blue(`- Accessibility: ${metrics.accessibility.score}`));
+    console.log(chalk.blue(`- Performance: ${metrics.performance.score}`));
+    console.log(chalk.blue(`- Reliability: ${metrics.reliability.score}`));
+    console.log(chalk.blue(`- Supply Chain: ${metrics.supplyChain.score}`));
     
     console.log(chalk.yellow('\n🤖 Generating AI Suggestions...'));
     const suggestions = await generateSuggestions(metrics);
     suggestions.forEach(s => console.log(chalk.green(`💡 ${s}`)));
+  });
+
+program
+  .command('sbom')
+  .description('Generate a CycloneDX-like SBOM from your dependencies')
+  .option('-o, --output <path>', 'Output file path (default: stdout)')
+  .action(async (options) => {
+    writeSbom(options.output);
+  });
+
+program
+  .command('compliance')
+  .description('Audit your codebase for production hygiene compliance')
+  .action(() => {
+    runCompliance();
   });
 
 if (process.argv.length > 2) {

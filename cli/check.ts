@@ -23,11 +23,18 @@ import {
   getFeatureFlagsScore,
   getQualityScore,
   getEfficiencyScore,
+  getPerformanceScore,
+  getReliabilityScore,
+  getSupplyChainScore,
+  calculateMetrics,
 } from './scorer';
+import { evaluateGates, printGateReport, printSevenDomainScorecard } from './gates';
 
 interface CheckOptions {
   fix?: boolean;
   verbose?: boolean;
+  strict?: boolean;
+  format?: string;
 }
 
 export async function runCheck(options: CheckOptions = {}): Promise<void> {
@@ -177,7 +184,52 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
   printCheckSection('Feature Flags', '\u{1F6A9}', { score: flags.score, label: 'Feature Flags', issues: flagIssues });
   allIssues.push(...flagIssues);
 
-  // 10. Secrets scan (from staged changes)
+  // 10. Performance check (new dimension)
+  const perf = getPerformanceScore();
+  scores.performance = perf.score;
+  const perfIssues: Issue[] = [];
+  if (perf.score < 70) {
+    perfIssues.push({
+      severity: 'warning',
+      category: 'Performance',
+      message: 'Performance issues detected',
+      fix: 'Review heavy dependencies and add performance budgets',
+    });
+  }
+  printCheckSection('Performance', '\u{26A1}', { score: perf.score, label: 'Performance', issues: perfIssues });
+  allIssues.push(...perfIssues);
+
+  // 11. Reliability check (new dimension)
+  const rel = getReliabilityScore();
+  scores.reliability = rel.score;
+  const relIssues: Issue[] = [];
+  if (rel.score < 70) {
+    relIssues.push({
+      severity: 'warning',
+      category: 'Reliability',
+      message: 'Reliability issues detected',
+      fix: 'Add error tracking, retry logic, and health checks',
+    });
+  }
+  printCheckSection('Reliability', '\u{1F504}', { score: rel.score, label: 'Reliability', issues: relIssues });
+  allIssues.push(...relIssues);
+
+  // 12. Supply chain check (new dimension)
+  const supply = getSupplyChainScore();
+  scores.supplyChain = supply.score;
+  const supplyIssues: Issue[] = [];
+  if (supply.score < 50) {
+    supplyIssues.push({
+      severity: 'warning',
+      category: 'Supply Chain',
+      message: 'Supply chain integrity issues detected',
+      fix: 'Add lock file, Dependabot, and pin dependency versions',
+    });
+  }
+  printCheckSection('Supply Chain', '\u{1F6E2}\u{FE0F}', { score: supply.score, label: 'Supply Chain', issues: supplyIssues });
+  allIssues.push(...supplyIssues);
+
+  // 13. Secrets scan (from staged changes)
   try {
     execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
     const diff = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd() });
@@ -198,24 +250,25 @@ export async function runCheck(options: CheckOptions = {}): Promise<void> {
     // Not a git repo or no staged changes - skip
   }
 
-  // Calculate overall score
-  const weights = { security: 2, testing: 1.5, quality: 1.5, deps: 1, a11y: 1, docs: 0.5, git: 1, ci: 1, flags: 0.5 };
-  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-  const totalScore = Math.round(
-    (scores.secrets * weights.security +
-      scores.testing * weights.testing +
-      scores.quality * weights.quality +
-      scores.dependencies * weights.deps +
-      scores.a11y * weights.a11y +
-      scores.docs * weights.docs +
-      scores.git * weights.git +
-      scores.ci * weights.ci +
-      scores.featureFlags * weights.flags) /
-      totalWeight
-  );
+  // Calculate overall score using the unified scoring system
+  const metrics = calculateMetrics();
+  const totalScore = metrics.overall;
 
   printScoreSummary(totalScore);
   printSummary(totalScore, allIssues);
+
+  // 7-Domain Scorecard display
+  const report = evaluateGates(metrics);
+  printSevenDomainScorecard(report.scorecard);
+
+  // Hard gates in strict mode
+  if (options.strict) {
+    printGateReport(report);
+    if (!report.gateResult.passed) {
+      console.log(chalk.red.bold('  Strict mode: blocked by hard gates. Fix failing dimensions above.'));
+      process.exit(1);
+    }
+  }
 
   if (options.fix && allIssues.length > 0) {
     console.log(chalk.cyan('  \u{1F527} Attempting auto-fixes...\n'));

@@ -8,7 +8,8 @@ import { callLLM } from './llm-client';
 
 export type HygieneDimension =
   | 'quality' | 'testing' | 'security' | 'efficiency' | 'accessibility'
-  | 'dependencies' | 'documentation' | 'gitHygiene' | 'ciPipeline' | 'featureFlags';
+  | 'dependencies' | 'documentation' | 'gitHygiene' | 'ciPipeline' | 'featureFlags'
+  | 'performance' | 'reliability' | 'supplyChain';
 
 export const DEFAULT_WEIGHTS: Record<HygieneDimension, number> = {
   quality: 1,
@@ -21,6 +22,9 @@ export const DEFAULT_WEIGHTS: Record<HygieneDimension, number> = {
   gitHygiene: 1,
   ciPipeline: 1,
   featureFlags: 1,
+  performance: 1,
+  reliability: 1,
+  supplyChain: 1,
 };
 
 const WEIGHTS_FILE = '.soloknuckle/score-weights.json';
@@ -62,8 +66,133 @@ export interface ScoreMetrics {
   gitHygiene: DimensionScore;
   ciPipeline: DimensionScore;
   featureFlags: DimensionScore;
+  performance: DimensionScore;
+  reliability: DimensionScore;
+  supplyChain: DimensionScore;
   overall: number;
   weights: Record<HygieneDimension, number>;
+}
+
+// ─── 7-Domain Scorecard Model ──────────────────────────────────────────────
+
+export type DomainName =
+  | 'codeQuality' | 'testing' | 'securityCompliance'
+  | 'performance' | 'reliability' | 'dependenciesSupplyChain'
+  | 'documentationVisibility';
+
+export interface DomainScorecard {
+  name: string;
+  score: number;
+  dimensions: { name: string; score: number }[];
+  status: 'production-ready' | 'almost-there' | 'needs-work' | 'not-ready';
+}
+
+export interface SevenDomainScorecard {
+  domains: DomainScorecard[];
+  overallScore: number;
+  overallStatus: 'production-ready' | 'almost-there' | 'needs-work' | 'not-ready';
+}
+
+function domainStatus(score: number): DomainScorecard['status'] {
+  if (score >= 90) return 'production-ready';
+  if (score >= 70) return 'almost-there';
+  if (score >= 50) return 'needs-work';
+  return 'not-ready';
+}
+
+function avg(scores: number[]): number {
+  if (scores.length === 0) return 0;
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+}
+
+export function calculateSevenDomainScorecard(metrics: ScoreMetrics): SevenDomainScorecard {
+  const domains: DomainScorecard[] = [
+    {
+      name: 'Code Quality',
+      score: avg([metrics.quality.score, metrics.efficiency.score]),
+      dimensions: [
+        { name: 'Quality', score: metrics.quality.score },
+        { name: 'Efficiency', score: metrics.efficiency.score },
+      ],
+      status: domainStatus(avg([metrics.quality.score, metrics.efficiency.score])),
+    },
+    {
+      name: 'Testing',
+      score: metrics.testing.score,
+      dimensions: [{ name: 'Testing', score: metrics.testing.score }],
+      status: domainStatus(metrics.testing.score),
+    },
+    {
+      name: 'Security & Compliance',
+      score: avg([metrics.security.score, metrics.accessibility.score]),
+      dimensions: [
+        { name: 'Security', score: metrics.security.score },
+        { name: 'Accessibility', score: metrics.accessibility.score },
+      ],
+      status: domainStatus(avg([metrics.security.score, metrics.accessibility.score])),
+    },
+    {
+      name: 'Performance',
+      score: metrics.performance.score,
+      dimensions: [{ name: 'Performance', score: metrics.performance.score }],
+      status: domainStatus(metrics.performance.score),
+    },
+    {
+      name: 'Reliability',
+      score: metrics.reliability.score,
+      dimensions: [{ name: 'Reliability', score: metrics.reliability.score }],
+      status: domainStatus(metrics.reliability.score),
+    },
+    {
+      name: 'Dependencies & Supply Chain',
+      score: avg([metrics.dependencies.score, metrics.supplyChain.score]),
+      dimensions: [
+        { name: 'Dependencies', score: metrics.dependencies.score },
+        { name: 'Supply Chain', score: metrics.supplyChain.score },
+      ],
+      status: domainStatus(avg([metrics.dependencies.score, metrics.supplyChain.score])),
+    },
+    {
+      name: 'Documentation & Visibility',
+      score: avg([metrics.documentation.score, metrics.gitHygiene.score, metrics.ciPipeline.score, metrics.featureFlags.score]),
+      dimensions: [
+        { name: 'Documentation', score: metrics.documentation.score },
+        { name: 'Git Hygiene', score: metrics.gitHygiene.score },
+        { name: 'CI/CD Pipeline', score: metrics.ciPipeline.score },
+        { name: 'Feature Flags', score: metrics.featureFlags.score },
+      ],
+      status: domainStatus(avg([metrics.documentation.score, metrics.gitHygiene.score, metrics.ciPipeline.score, metrics.featureFlags.score])),
+    },
+  ];
+
+  const overallScore = Math.round(domains.reduce((s, d) => s + d.score, 0) / domains.length);
+
+  return {
+    domains,
+    overallScore,
+    overallStatus: domainStatus(overallScore),
+  };
+}
+
+// ─── Hard Gate Helpers ──────────────────────────────────────────────────────
+
+export interface GateResult {
+  passed: boolean;
+  gates: { name: string; passed: boolean; score: number; threshold: number }[];
+}
+
+export function evaluateHardGates(metrics: ScoreMetrics): GateResult {
+  const gates = [
+    { name: 'security', passed: metrics.security.score >= 70, score: metrics.security.score, threshold: 70 },
+    { name: 'testing', passed: metrics.testing.score >= 70, score: metrics.testing.score, threshold: 70 },
+    { name: 'reliability', passed: metrics.reliability.score >= 60, score: metrics.reliability.score, threshold: 60 },
+    { name: 'supplyChain', passed: metrics.supplyChain.score >= 50, score: metrics.supplyChain.score, threshold: 50 },
+  ];
+
+  return {
+    passed: gates.every(g => g.passed),
+    gates,
+  };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -602,6 +731,207 @@ export function getFeatureFlagsScore(): DimensionScore {
   }
 }
 
+// ─── New 3 Dimensions ──────────────────────────────────────────────────────
+
+export function getPerformanceScore(): DimensionScore {
+  try {
+    let score = 100;
+    let report = '';
+
+    if (fileExists('package.json')) {
+      const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8'));
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+      // Penalize heavy deps
+      const heavyDeps = ['moment', 'lodash', 'underscore', 'jquery'];
+      for (const name of heavyDeps) {
+        if (deps && deps[name]) {
+          score -= 5;
+          report += `'${name}' is known to impact bundle size. Consider a lighter alternative.\n`;
+        }
+      }
+
+      // Check for next/image or image optimization config
+      if (fileExists('next.config.js') || fileExists('next.config.mjs') || fileExists('next.config.ts')) {
+        report += 'Next.js config detected — image optimization available.\n';
+      }
+
+      // Check for bundle analyzer
+      if (deps && (deps['webpack-bundle-analyzer'] || deps['@next/bundle-analyzer'])) {
+        score += 5;
+        report += 'Bundle analyzer is configured.\n';
+      }
+    }
+
+    // Check for Lighthouse or performance budgets
+    const perfFiles = ['lighthouserc.js', 'lighthouserc.json', '.lighthouserc.json', 'performance-budget.json'];
+    for (const f of perfFiles) {
+      if (fileExists(f)) {
+        score += 10;
+        report += `Performance config (${f}) found.\n`;
+        break;
+      }
+    }
+
+    if (score > 100) score = 100;
+    if (score < 0) score = 0;
+    return { score, rawOutput: report || 'No performance issues detected.' };
+  } catch (err: unknown) {
+    return { score: 70, rawOutput: `Error checking performance: ${getErrorMessage(err)}` };
+  }
+}
+
+export function getReliabilityScore(): DimensionScore {
+  try {
+    let score = 100;
+    let report = '';
+
+    // Check for error tracking
+    const errorTrackingPkgs = ['@sentry/node', '@sentry/browser', '@sentry/react', 'rollbar', 'bugsnag', '@datadog/browser-rum'];
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    let hasErrorTracking = false;
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+      for (const p of errorTrackingPkgs) {
+        if (allDeps && allDeps[p]) {
+          hasErrorTracking = true;
+          break;
+        }
+      }
+    }
+    if (hasErrorTracking) {
+      score += 5;
+      report += 'Error tracking service detected.\n';
+    } else {
+      score -= 10;
+      report += 'No error tracking service (Sentry, Rollbar, etc.) detected.\n';
+    }
+
+    // Check for retry/timeout patterns in source
+    const srcDirs = ['src', 'cli', 'lib', 'api'];
+    let retryCount = 0;
+    for (const dir of srcDirs) {
+      const fullDir = path.join(process.cwd(), dir);
+      if (!fs.existsSync(fullDir)) continue;
+      const scanCode = (d: string) => {
+        if (!fs.existsSync(d)) return;
+        const entries = fs.readdirSync(d);
+        for (const entry of entries) {
+          const fp = path.join(d, entry);
+          if (fs.statSync(fp).isDirectory() && entry !== 'node_modules' && entry !== '.git') {
+            scanCode(fp);
+          } else if (fp.endsWith('.ts') || fp.endsWith('.js')) {
+            const content = fs.readFileSync(fp, 'utf-8');
+            if (/retry|backoff|exponential/i.test(content)) retryCount++;
+          }
+        }
+      };
+      scanCode(fullDir);
+    }
+
+    if (retryCount > 0) {
+      score += 5;
+      report += `Retry/backoff logic found in ${retryCount} file(s).\n`;
+    } else {
+      score -= 5;
+      report += 'No retry/backoff patterns found — transient failures may propagate.\n';
+    }
+
+    // Check for health check endpoint
+    let hasHealthCheck = false;
+    for (const dir of srcDirs) {
+      const fullDir = path.join(process.cwd(), dir);
+      if (!fs.existsSync(fullDir)) continue;
+      const scanCode = (d: string) => {
+        if (!fs.existsSync(d) || hasHealthCheck) return;
+        const entries = fs.readdirSync(d);
+        for (const entry of entries) {
+          const fp = path.join(d, entry);
+          if (fs.statSync(fp).isDirectory() && entry !== 'node_modules' && entry !== '.git') {
+            scanCode(fp);
+          } else if (fp.endsWith('.ts') || fp.endsWith('.js')) {
+            const content = fs.readFileSync(fp, 'utf-8');
+            if (/\/health|\/healthz|\/ready|\/readiness/i.test(content)) hasHealthCheck = true;
+          }
+        }
+      };
+      scanCode(fullDir);
+    }
+
+    if (hasHealthCheck) {
+      score += 10;
+      report += 'Health check endpoint detected.\n';
+    } else {
+      score -= 5;
+      report += 'No health check endpoint found.\n';
+    }
+
+    if (score > 100) score = 100;
+    if (score < 0) score = 0;
+    return { score, rawOutput: report || 'Reliability checks passed.' };
+  } catch (err: unknown) {
+    return { score: 70, rawOutput: `Error checking reliability: ${getErrorMessage(err)}` };
+  }
+}
+
+export function getSupplyChainScore(): DimensionScore {
+  try {
+    let score = 50;
+    let report = '';
+
+    // Lock file integrity
+    const lockFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
+    const hasLockFile = lockFiles.some(f => fileExists(f));
+    if (hasLockFile) {
+      score += 20;
+      report += 'Lock file present — installs are reproducible.\n';
+    } else {
+      report += 'No lock file — supply chain integrity is weakened.\n';
+    }
+
+    // Check for .npmrc or registry config
+    if (fileExists('.npmrc')) {
+      score += 10;
+      report += '.npmrc detected — custom registry config present.\n';
+    }
+
+    // Check for Dependabot / Renovate
+    if (fileExists('.github/dependabot.yml') || fileExists('.github/dependabot.yaml') || fileExists('renovate.json') || fileExists('.renovaterc') || fileExists('.renovaterc.json')) {
+      score += 15;
+      report += 'Dependency update bot (Dependabot/Renovate) configured.\n';
+    } else {
+      report += 'No dependency update bot detected.\n';
+    }
+
+    // Check for pinned versions in package.json
+    if (fileExists('package.json')) {
+      const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8'));
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+      if (allDeps) {
+        const deps = Object.entries(allDeps) as [string, string][];
+        const pinnedCount = deps.filter(([, v]) => !v.startsWith('^') && !v.startsWith('~') && !v.startsWith('>') && v !== '*').length;
+        const ratio = deps.length > 0 ? pinnedCount / deps.length : 0;
+        if (ratio > 0.8) {
+          score += 10;
+          report += `Good version pinning (${pinnedCount}/${deps.length} deps pinned).\n`;
+        } else if (ratio > 0.5) {
+          score += 5;
+          report += `Moderate version pinning (${pinnedCount}/${deps.length} deps pinned).\n`;
+        } else {
+          report += `Low version pinning (${pinnedCount}/${deps.length} deps pinned). Consider pinning more deps.\n`;
+        }
+      }
+    }
+
+    if (score > 100) score = 100;
+    if (score < 0) score = 0;
+    return { score, rawOutput: report || 'Supply chain checks passed.' };
+  } catch (err: unknown) {
+    return { score: 50, rawOutput: `Error checking supply chain: ${getErrorMessage(err)}` };
+  }
+}
+
 // ─── Unified Score Calculation ──────────────────────────────────────────────
 
 export function calculateMetrics(): ScoreMetrics {
@@ -615,12 +945,16 @@ export function calculateMetrics(): ScoreMetrics {
   const gitHygiene = getGitHygieneScore();
   const ciPipeline = getCIPipelineScore();
   const featureFlags = getFeatureFlagsScore();
+  const performance = getPerformanceScore();
+  const reliability = getReliabilityScore();
+  const supplyChain = getSupplyChainScore();
 
   const weights = loadWeights();
 
   const dims: Record<HygieneDimension, DimensionScore> = {
     quality, testing, security, efficiency, accessibility,
     dependencies, documentation, gitHygiene, ciPipeline, featureFlags,
+    performance, reliability, supplyChain,
   };
 
   let totalWeight = 0;
@@ -635,6 +969,7 @@ export function calculateMetrics(): ScoreMetrics {
   return {
     quality, testing, security, efficiency, accessibility,
     dependencies, documentation, gitHygiene, ciPipeline, featureFlags,
+    performance, reliability, supplyChain,
     overall,
     weights,
   };

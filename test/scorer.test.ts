@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 import {
   getQualityScore, getTestingScore, getSecurityScore, getEfficiencyScore, getAccessibilityScore,
   getDependencyScore, getDocumentationScore, getGitHygieneScore, getCIPipelineScore, getFeatureFlagsScore,
+  getPerformanceScore, getReliabilityScore, getSupplyChainScore,
   calculateMetrics, loadWeights,
 } from '../cli/scorer';
 
@@ -313,12 +314,164 @@ describe('getAccessibilityScore', () => {
   });
 });
 
+describe('getPerformanceScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('returns 100 with no heavy deps', () => {
+    writePkg({ lint: 'eslint .' });
+    const result = getPerformanceScore();
+    expect(result.score).toBe(100);
+  });
+
+  it('deducts 5 per heavy dep', () => {
+    writePkg({ lint: 'eslint .' });
+    const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf-8'));
+    pkg.dependencies = { moment: '1.0.0', lodash: '4.0.0' };
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2));
+    const result = getPerformanceScore();
+    expect(result.score).toBe(90);
+  });
+
+  it('adds 5 for bundle analyzer (capped at 100)', () => {
+    writePkg({ lint: 'eslint .' });
+    const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf-8'));
+    pkg.devDependencies = { 'webpack-bundle-analyzer': '1.0.0' };
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2));
+    const result = getPerformanceScore();
+    // 100 + 5 = 105 → capped at 100
+    expect(result.score).toBe(100);
+    expect(result.rawOutput).toContain('Bundle analyzer');
+  });
+
+  it('adds 10 for performance budget config (capped at 100)', () => {
+    fs.writeFileSync(path.join(tmpDir, 'lighthouserc.js'), 'module.exports = {};');
+    const result = getPerformanceScore();
+    // 100 + 10 = 110 → capped at 100
+    expect(result.score).toBe(100);
+    expect(result.rawOutput).toContain('Performance config');
+  });
+
+  it('detects Next.js config', () => {
+    writePkg({ lint: 'eslint .' });
+    fs.writeFileSync(path.join(tmpDir, 'next.config.js'), 'module.exports = {};');
+    const result = getPerformanceScore();
+    expect(result.rawOutput).toContain('Next.js config detected');
+  });
+});
+
+describe('getReliabilityScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('deducts 10 when no error tracking', () => {
+    writePkg({ lint: 'eslint .' });
+    const result = getReliabilityScore();
+    expect(result.score).toBe(80); // 100 - 10 error tracking, -5 no retry, -5 no health check → 80
+    expect(result.rawOutput).toContain('No error tracking');
+  });
+
+  it('adds 5 for error tracking service', () => {
+    writePkg({ lint: 'eslint .' });
+    const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf-8'));
+    pkg.dependencies = { '@sentry/node': '1.0.0' };
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2));
+    const result = getReliabilityScore();
+    expect(result.rawOutput).toContain('Error tracking service detected');
+  });
+
+  it('detects retry/backoff patterns', () => {
+    writePkg({ lint: 'eslint .' });
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'src', 'retry.ts'), 'const retry = async () => { await backoff(); };');
+    const result = getReliabilityScore();
+    expect(result.rawOutput).toContain('Retry/backoff logic found');
+  });
+
+  it('detects health check endpoint', () => {
+    writePkg({ lint: 'eslint .' });
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'src', 'server.ts'), 'app.get("/health", (req, res) => res.json({ status: "ok" }));');
+    const result = getReliabilityScore();
+    expect(result.rawOutput).toContain('Health check endpoint detected');
+  });
+
+  it('scores 115 with all reliability features (capped at 100)', () => {
+    writePkg({ lint: 'eslint .' });
+    const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf-8'));
+    pkg.dependencies = { '@sentry/node': '1.0.0' };
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2));
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'src', 'retry.ts'), 'const retry = async () => { await backoff(); };');
+    fs.writeFileSync(path.join(tmpDir, 'src', 'server.ts'), 'app.get("/health", (req, res) => res.json({ status: "ok" }));');
+    const result = getReliabilityScore();
+    expect(result.score).toBe(100); // 100 + 5 + 5 + 10 = 120 → capped at 100
+  });
+});
+
+describe('getSupplyChainScore', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+  });
+
+  it('starts at 50 and adds 20 for lock file', () => {
+    fs.writeFileSync(path.join(tmpDir, 'package-lock.json'), '{}');
+    const result = getSupplyChainScore();
+    expect(result.score).toBe(70);
+    expect(result.rawOutput).toContain('Lock file present');
+  });
+
+  it('adds 10 for .npmrc', () => {
+    fs.writeFileSync(path.join(tmpDir, '.npmrc'), 'registry=https://registry.npmjs.org/');
+    const result = getSupplyChainScore();
+    expect(result.score).toBe(60);
+    expect(result.rawOutput).toContain('.npmrc detected');
+  });
+
+  it('adds 15 for Dependabot', () => {
+    fs.mkdirSync(path.join(tmpDir, '.github'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.github', 'dependabot.yml'), 'version: 2');
+    const result = getSupplyChainScore();
+    expect(result.score).toBe(65);
+    expect(result.rawOutput).toContain('Dependency update bot');
+  });
+
+  it('adds 10 for pinned deps', () => {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({
+      dependencies: { 'express': '4.18.0', 'lodash': '4.17.21' },
+    }, null, 2));
+    const result = getSupplyChainScore();
+    expect(result.score).toBe(60); // 50 base + 10 for 100% pinned
+    expect(result.rawOutput).toContain('pinned');
+  });
+
+  it('does not penalize for missing deps', () => {
+    const result = getSupplyChainScore();
+    expect(result.score).toBeGreaterThanOrEqual(0);
+  });
+
+  it('caps at 100 with all supply chain features', () => {
+    fs.writeFileSync(path.join(tmpDir, 'package-lock.json'), '{}');
+    fs.writeFileSync(path.join(tmpDir, '.npmrc'), 'registry=https://registry.npmjs.org/');
+    fs.mkdirSync(path.join(tmpDir, '.github'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.github', 'dependabot.yml'), 'version: 2');
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({
+      dependencies: { 'express': '4.18.0', 'lodash': '4.17.21', 'cors': '2.8.5' },
+    }, null, 2));
+    const result = getSupplyChainScore();
+    // 50 + 20 lock + 10 npmrc + 15 dependabot + 10 pinned = 105 → capped at 100
+    expect(result.score).toBe(100);
+  });
+});
+
 describe('calculateMetrics', () => {
   beforeEach(() => {
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
   });
 
-  it('overall is the rounded weighted average of all 10 dimensions', () => {
+  it('returns correct shape with all 13 dimensions', () => {
     writePkg({ lint: 'eslint .', test: 'vitest' });
     mockExecForLint('', false);
     mockExecForTests('', false);
@@ -327,25 +480,11 @@ describe('calculateMetrics', () => {
     fs.writeFileSync(path.join(tmpDir, 'ui', 'src', 'App.jsx'), '<img alt="ok" />\n');
 
     const m = calculateMetrics();
-    // overall is the rounded weighted average of ALL 10 dimensions, not just 5
-    expect(m.overall).toBeGreaterThanOrEqual(0);
-    expect(m.overall).toBeLessThanOrEqual(100);
-    // all dimension scores should be present and numeric
-    expect(typeof m.quality.score).toBe('number');
-    expect(typeof m.gitHygiene.score).toBe('number');
-  });
-
-  it('returns correct shape with all 10 dimensions', () => {
-    writePkg({ lint: 'eslint .', test: 'vitest' });
-    mockExecForLint('', false);
-    mockExecForTests('', false);
-    mockExecForSecurity('');
-
-    const m = calculateMetrics();
 
     for (const key of [
       'quality', 'testing', 'security', 'efficiency', 'accessibility',
       'dependencies', 'documentation', 'gitHygiene', 'ciPipeline', 'featureFlags',
+      'performance', 'reliability', 'supplyChain',
     ]) {
       expect(m[key]).toHaveProperty('score');
       expect(m[key]).toHaveProperty('rawOutput');
@@ -355,7 +494,7 @@ describe('calculateMetrics', () => {
     expect(typeof m.overall).toBe('number');
   });
 
-  it('overall is the rounded weighted average', () => {
+  it('overall is the rounded weighted average of all 13 dimensions', () => {
     writePkg({ lint: 'eslint .', test: 'vitest' });
     mockExecForLint('', false);
     mockExecForTests('', false);
