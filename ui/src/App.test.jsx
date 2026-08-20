@@ -20,7 +20,7 @@ describe('App', () => {
 
   it('triggers sandbox execution and shows executing state', async () => {
     render(<App />);
-    const executeBtn = screen.getByRole('button', { name: /Execute in Sandbox/i });
+    const executeBtn = await screen.findByText('Execute in Sandbox');
     fireEvent.click(executeBtn);
     expect(screen.getAllByText(/Executing.../i).length).toBeGreaterThan(0);
   });

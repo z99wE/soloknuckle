@@ -35,6 +35,31 @@ function App() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [hooksEnabled, setHooksEnabled] = useState(true);
   const [aiCommitsEnabled, setAiCommitsEnabled] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [copiedCommand, setCopiedCommand] = useState(null);
+
+  const detectOS = () => {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('win')) return 'Windows';
+    if (ua.includes('mac')) return 'macOS';
+    if (ua.includes('linux')) return 'Linux';
+    return 'Unknown';
+  };
+
+  const os = detectOS();
+
+  const installCommands = {
+    macOS: 'brew install soloknuckle',
+    Windows: 'winget install soloknuckle',
+    Linux: 'curl -fsSL https://raw.githubusercontent.com/z99wE/soloknuckle/main/install.sh | bash',
+    Unknown: 'npm install -g soloknuckle',
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCommand(label);
+    setTimeout(() => setCopiedCommand(null), 2000);
+  };
 
   // ── Multi-Provider State ──────────────────────────────────────────────────
   const [providers, setProviders] = useState([]);
@@ -159,7 +184,186 @@ function App() {
           Enforce production hygiene with Neo-Brutalist authority.
           Manage LLM audits, sandbox testing, and agent firewalls locally.
         </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+          <button 
+            className="btn" 
+            style={{ 
+              fontSize: '1.1rem', 
+              padding: '1rem 2rem', 
+              backgroundColor: '#000', 
+              color: 'var(--secondary)',
+              boxShadow: '6px 6px 0 var(--primary)',
+              cursor: 'pointer'
+            }} 
+            onClick={() => setShowInstallModal(true)}
+            aria-label="Get Started with Soloknuckle"
+          >
+            Get Started — It's Free
+          </button>
+        </div>
       </header>
+
+      {/* Install Modal */}
+      {showInstallModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+          onClick={() => setShowInstallModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Install Soloknuckle"
+        >
+          <div 
+            style={{
+              background: '#fff',
+              border: '4px solid #000',
+              boxShadow: '8px 8px 0 #000',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '2rem'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.8rem' }}>Install Soloknuckle</h2>
+              <button 
+                onClick={() => setShowInstallModal(false)}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  fontSize: '2rem', 
+                  cursor: 'pointer',
+                  fontWeight: 900,
+                  lineHeight: 1
+                }}
+                aria-label="Close install modal"
+              >
+                ×
+              </button>
+            </div>
+
+            <p style={{ fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              We detected you're on <strong>{os}</strong>. Choose your install method:
+            </p>
+
+            {/* Primary install command */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Recommended for {os}
+              </label>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: '#0a0a0f', 
+                color: '#f0f0ff', 
+                padding: '1rem', 
+                border: '2px solid #000',
+                fontFamily: 'monospace',
+                fontSize: '1rem'
+              }}>
+                <code style={{ flex: 1, overflowX: 'auto' }}>{installCommands[os]}</code>
+                <button
+                  onClick={() => copyToClipboard(installCommands[os], 'primary')}
+                  style={{
+                    background: copiedCommand === 'primary' ? '#22c55e' : 'var(--primary)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    marginLeft: '1rem',
+                    whiteSpace: 'nowrap'
+                  }}
+                  aria-label="Copy install command"
+                >
+                  {copiedCommand === 'primary' ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Alternative: npm */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Or use npm (requires Node.js)
+              </label>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: '#f4f4f0', 
+                padding: '1rem', 
+                border: '2px solid #000',
+                fontFamily: 'monospace',
+                fontSize: '1rem'
+              }}>
+                <code style={{ flex: 1, overflowX: 'auto' }}>npm install -g soloknuckle</code>
+                <button
+                  onClick={() => copyToClipboard('npm install -g soloknuckle', 'npm')}
+                  style={{
+                    background: copiedCommand === 'npm' ? '#22c55e' : '#000',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    marginLeft: '1rem',
+                    whiteSpace: 'nowrap'
+                  }}
+                  aria-label="Copy npm install command"
+                >
+                  {copiedCommand === 'npm' ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Step-by-step guide */}
+            <div style={{ 
+              background: 'var(--secondary)', 
+              padding: '1.5rem', 
+              border: '2px solid #000',
+              marginTop: '1.5rem'
+            }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem' }}>After Install:</h3>
+              <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: 2 }}>
+                <li><strong>Open Terminal</strong> (or Command Prompt on Windows)</li>
+                <li><strong>Navigate</strong> to your project folder: <code style={{ background: '#fff', padding: '0.2rem 0.5rem' }}>cd your-project</code></li>
+                <li><strong>Run init:</strong> <code style={{ background: '#fff', padding: '0.2rem 0.5rem' }}>soloknuckle init</code></li>
+                <li><strong>Open Dashboard:</strong> <code style={{ background: '#fff', padding: '0.2rem 0.5rem' }}>soloknuckle dashboard</code></li>
+              </ol>
+            </div>
+
+            <button
+              onClick={() => setShowInstallModal(false)}
+              style={{
+                width: '100%',
+                marginTop: '1.5rem',
+                padding: '1rem',
+                background: 'var(--primary)',
+                color: '#fff',
+                border: '2px solid #000',
+                fontWeight: 800,
+                fontSize: '1rem',
+                cursor: 'pointer',
+                boxShadow: '4px 4px 0 #000'
+              }}
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="grid" id="main-content">
         {/* Card 1: Production Safe Mode */}
