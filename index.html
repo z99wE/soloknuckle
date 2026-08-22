@@ -795,30 +795,38 @@
     </div>
   </section>
 
-  <!-- PROBLEM -->
+  <!-- DIFFERENTIATION -->
   <section class="problem section" id="problem">
     <div class="container">
       <div class="section-header">
-        <div class="section-label">The Problem</div>
-        <h2>AI writes fast.<br>Fast isn't always safe.</h2>
-        <p>You're shipping faster than ever. But speed without guardrails leaves production exposed — and AI hides the gaps.</p>
+        <div class="section-label">Why Soloknuckle</div>
+        <h2>Most tools just lint.<br>Soloknuckle <em>thinks</em>.</h2>
+        <p>The gap between "tests pass" and "production is safe" is where bugs live. Soloknuckle closes it.</p>
       </div>
       <div class="problem-grid">
         <div class="problem-card">
-          <h3><span class="problem-icon">🔑</span> Secrets in Code</h3>
-          <p>AI assistants paste API keys, tokens, and credentials directly into your codebase. One git push and they're public.</p>
+          <h3><span class="problem-icon">🧬</span> Most tools check coverage. Soloknuckle injects bugs.</h3>
+          <p>100% line coverage catches 4% of bugs. Soloknuckle's mutation testing breaks your code on purpose — then checks if your tests notice. If they don't, you know before production does.</p>
         </div>
         <div class="problem-card">
-          <h3><span class="problem-icon">💥</span> Destructive Commands</h3>
-          <p>A single <code>rm -rf</code> or <code>git push --force</code> from an overeager agent can wipe out hours of work in seconds.</p>
+          <h3><span class="problem-icon">🤖</span> Most tools scan code. Soloknuckle knows who wrote it.</h3>
+          <p>AI-generated commits have different failure modes than human ones. Soloknuckle detects AI-authored code, tracks acceptance rates, and quarantines repeated offenders — so you review the right things.</p>
         </div>
         <div class="problem-card">
-          <h3><span class="problem-icon">📊</span> The Coverage Illusion</h3>
-          <p>100% line coverage sounds great — until you learn it caught 4% of bugs. Coverage measures execution, not validation.</p>
+          <h3><span class="problem-icon">🛡️</span> Most tools warn. Soloknuckle blocks.</h3>
+          <p>Linters suggest. Soloknuckle enforces. Hard gates on security, testing, reliability, and supply chain mean bad code physically cannot merge. Exit code 1. CI fails. No override.</p>
         </div>
         <div class="problem-card">
-          <h3><span class="problem-icon">🔥</span> Flaky Test Explosion</h3>
-          <p>When the same AI writes code and tests, both share the same blind spots. Flaky tests erode trust and cost $360K+/month in maintenance.</p>
+          <h3><span class="problem-icon">🔗</span> Most tools trust dependencies. Soloknuckle doesn't.</h3>
+          <p>Supply chain attacks grew 742% in 2024. Soloknuckle blocks known malicious IPs, detects typosquatting, audits package provenance, and enforces minimum package age — before a single byte installs.</p>
+        </div>
+        <div class="problem-card">
+          <h3><span class="problem-icon">🔍</span> Most tools match patterns. Soloknuckle reads context.</h3>
+          <p>Regex-based linters can't tell a real vulnerability from a test fixture. Soloknuckle's context-aware scanner understands file purpose, reduces false positives, and knows what's actually dangerous.</p>
+        </div>
+        <div class="problem-card">
+          <h3><span class="problem-icon">💰</span> Most tools count tests. Soloknuckle counts failures.</h3>
+          <p>Every flaky test costs ~$100/month in wasted CI time and developer attention. Soloknuckle detects flaky patterns, estimates the real cost, and tells you which tests to kill first.</p>
         </div>
       </div>
     </div>

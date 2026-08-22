@@ -524,49 +524,33 @@ npm install soloknuckle --provenance
 
 ---
 
-## Why Soloknuckle? The Gaps Others Leave Open
+## Why Soloknuckle? Most tools just...
 
-### The Problem with Existing Tools
+> The gap between "tests pass" and "production is safe" is where bugs live. Soloknuckle closes it.
 
-| Tool Category | What They Do | The Gap |
-|---------------|--------------|---------|
-| **Linters (ESLint, Prettier)** | Check code style | No security, no testing, no production readiness |
-| **Security Scanners (Snyk, SonarQube)** | Find vulnerabilities | Cloud-based, expensive, require accounts |
-| **Test Runners (Jest, Mocha)** | Execute tests | Don't verify test quality or catch flaky tests |
-| **Coverage Tools (Istanbul)** | Measure coverage | 98% coverage can mean 4% bug detection |
-| **AI Coding Assistants** | Write code + tests | Same model writes both — tests ratify implementation |
+### Most tools check coverage. Soloknuckle injects bugs.
 
-### The Coverage Illusion
+100% line coverage catches 4% of bugs. Soloknuckle's mutation testing breaks your code on purpose — then checks if your tests notice. If they don't, you know before production does.
 
-> "A test suite achieved 100% line coverage and a 4% mutation score. It executed every line. It caught 4% of the bugs."
+### Most tools scan code. Soloknuckle knows who wrote it.
 
-**What this means:** Coverage measures whether a line executed, not whether the execution validated anything meaningful.
+AI-generated commits have different failure modes than human ones. Soloknuckle detects AI-authored code, tracks acceptance rates, and quarantines repeated offenders — so you review the right things.
 
-**Soloknuckle's answer:** Mutation Testing Gate that applies mutations to your source code and checks if your tests catch them — proving behavior validation, not just line execution.
+### Most tools warn. Soloknuckle blocks.
 
-### Same-Model Blindness
+Linters suggest. Soloknuckle enforces. Hard gates on security, testing, reliability, and supply chain mean bad code physically cannot merge. Exit code 1. CI fails. No override.
 
-> "When the same model generates both your implementation and your tests, both artifacts share the same mental model. If the assumptions are wrong, both are wrong in the same direction."
+### Most tools trust dependencies. Soloknuckle doesn't.
 
-**What this means:** AI tests ratify the implementation rather than validating behavior.
+Supply chain attacks grew 742% in 2024. Soloknuckle blocks known malicious IPs, detects typosquatting, audits package provenance, and enforces minimum package age — before a single byte installs.
 
-**Soloknuckle's answer:** Context-Aware Test Validator that detects missing mocks, real dependencies, no assertions, and hardcoded values — the telltale signs of tests that ratify rather than validate.
+### Most tools match patterns. Soloknuckle reads context.
 
-### No Context Awareness
+Regex-based linters can't tell a real vulnerability from a test fixture. Soloknuckle's context-aware scanner understands file purpose, reduces false positives, and knows what's actually dangerous.
 
-> "AI tools test functions in isolation. They don't know the callers, the incident history, or what downstream services consume the return type."
+### Most tools count tests. Soloknuckle counts failures.
 
-**What this means:** Tests miss integration points, caller contracts, and production failure modes.
-
-**Soloknuckle's answer:** Caller Contract Checker that extracts function signatures from source code and validates that test calls match the actual signatures — catching parameter mismatches and contract violations.
-
-### Flaky Test Explosion
-
-> "A 500-test suite costs roughly $360,750 a month to maintain manually. Selector changes (32%) and flow changes (27%) drive most failures."
-
-**What this means:** Tests break when UI changes, not when code regresses.
-
-**Soloknuckle's answer:** Flaky Test Detector that identifies intermittent failures by pattern analysis and multi-run detection, with maintenance cost estimation to prioritize fixes.
+Every flaky test costs ~$100/month in wasted CI time and developer attention. Soloknuckle detects flaky patterns, estimates the real cost, and tells you which tests to kill first.
 
 ---
 
